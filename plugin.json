@@ -1,0 +1,36 @@
+{
+    "name": "mct",
+    "marketplaceName":
+    {
+        "de": "MCT",
+        "en": "MCT"
+    },
+    "platform" : {
+        "php" : ">=7.3,<8.1"
+      },
+    "namespace": "MCT",
+    "author": "plentysystems AG",
+    "type": "backend",
+    "version": "1.0.0",
+    "isClosedSource": true,
+    "authorIcon": "icon_author_xs.png",
+    "pluginIcon": "icon_plugin_xs.png",
+    "email": "info@plentymarkets.com",
+    "phone": "",
+    "description": "MultiChannelTrade FTP Order Export",
+    "shortDescription": {
+        "de": "MultiChannelTrade FTP Order Export",
+        "en": "MultiChannelTrade FTP Order Export"
+    },
+    "keywords": ["MCT"],
+    "categories": ["4124"],
+    "serviceProvider": "MCT\\Providers\\PluginServiceProvider",
+    "runOnBuild": [
+        "MCT\\Migrations\\CreateMCTExportTable",
+        "MCT\\Migrations\\CreateMCTSettingsTable"
+    ],
+    "dependencies": {
+        "guzzlehttp/guzzle": "^7.0",
+        "league/flysystem-sftp-v3": "^3.0"
+    }
+}

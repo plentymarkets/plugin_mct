@@ -1,0 +1,78 @@
+{
+  "formatVersion": 1,
+  "menu": {
+    "settings": {
+      "label": "Config.settings",
+      "formFields": {
+        "host": {
+          "type": "inputText",
+          "required": true,
+          "label": "Config.host",
+          "options": {}
+        },
+        "port": {
+          "type": "inputText",
+          "required": true,
+          "label": "Config.port",
+          "options": {}
+        },
+        "username": {
+          "type": "inputText",
+          "required": true,
+          "label": "Config.username",
+          "options": {}
+        },
+        "password": {
+          "type": "inputText",
+          "required": true,
+          "label": "Config.password",
+          "options": {
+            "isPassword": true
+          }
+        },
+        "folderPath": {
+          "type": "inputText",
+          "required": false,
+          "label": "Config.folderPath",
+          "options": {}
+        },
+        "pluginVariant": {
+          "type": "selectBox",
+          "required": false,
+          "label": "Config.pluginVariant",
+          "options": {
+            "defaultValue": "0",
+            "selectBoxValues": [
+              {
+                "value": "0",
+                "caption": "DE"
+              },
+              {
+                "value": "1",
+                "caption": "AT"
+              }
+            ]
+          }
+        },
+        "batchCount": {
+          "type": "inputText",
+          "required": false,
+          "label": "Config.batchCount",
+          "options": {}
+        },
+        "cronInterval": {
+          "type": "inputText",
+          "required": false,
+          "label": "Config.cronInterval",
+          "options": {}
+        },
+        "processedStatus": {
+          "type": "inputText",
+          "required": false,
+          "label": "Config.processedStatus",
+          "options": {}
+        }
+      }
+    }
+  }
+}
