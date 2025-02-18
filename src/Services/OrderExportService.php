@@ -12,8 +12,10 @@ use Plenty\Modules\Account\Address\Models\AddressOption;
 use Plenty\Modules\Order\Contracts\OrderRepositoryContract;
 use Plenty\Modules\Order\Date\Models\OrderDateType;
 use Plenty\Modules\Order\Models\Order;
+use Plenty\Modules\Order\Models\OrderItem;
 use Plenty\Modules\Order\Models\OrderItemType;
 use Plenty\Modules\Order\Property\Models\OrderPropertyType;
+use Plenty\Modules\Order\Referrer\Contracts\OrderReferrerRepositoryContract;
 use Plenty\Modules\Order\RelationReference\Models\OrderRelationReference;
 use Plenty\Plugin\Log\Loggable;
 
@@ -32,11 +34,6 @@ class OrderExportService
     private $configRepository;
 
     /**
-     * @var String
-     */
-    private $pluginVariant;
-
-    /**
      * @var int
      */
     private $totalOrdersPerBatch;
@@ -45,6 +42,11 @@ class OrderExportService
      * @var OrderRepositoryContract
      */
    private $orderRepository;
+
+    /**
+     * @var array
+     */
+   private $marketplaceValueMapping;
 
     /**
      * @param ClientForSFTP $ftpClient
@@ -57,9 +59,40 @@ class OrderExportService
     {
         $this->ftpClient            = $ftpClient;
         $this->configRepository     = $configRepository;
-        $this->pluginVariant        = $this->configRepository->getPluginVariant();
         $this->totalOrdersPerBatch  = $this->configRepository->getTotalOrdersPerBatch();
         $this->orderRepository      = $orderRepository;
+        $this->marketplaceValueMapping = $this->getMarketplaceValueMapping();
+    }
+
+    private function getMarketplaceValueMapping()
+    {
+        return [
+            '150.00' => '5028142',
+            '102.01' => '5028259',
+            '143.00' => '5025855'
+        ];
+    }
+    private function getValueBasedOnMarketplace(float $referrerId)
+    {
+        if (isset($this->marketplaceValueMapping[$referrerId])) {
+            return $this->marketplaceValueMapping[$referrerId];
+        }
+        /*
+        /** @var OrderReferrerRepositoryContract $orderReferrerRepo */
+        /*$orderReferrerRepo = pluginApp(OrderReferrerRepositoryContract::class);
+
+        $referrers = $orderReferrerRepo->getList();
+        if(!empty($referrers))
+        {
+            foreach($referrers as $referrer)
+            {
+                if($referrerId === $referrer->referrer_id)
+                {
+                }
+            }
+        }
+        */
+        return '';
     }
 
     /**
@@ -69,6 +102,145 @@ class OrderExportService
     public function processOrder(Order $order)
     {
         $record = [];
+
+        $record['EDI_DC40'] = [
+            'IDOCTYP'   => 'ORDERS05',
+            'MESTYP'    => 'ORDERS',
+            'MESCOD'    => 'AFT',
+            'SNDPOR'    => 'BIZP_TRFC',
+            'SNDPRT'    => 'KU',
+            'SNDPRN'    => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+            'RCVPOR'    => 'SAPPW1'
+        ];
+
+        $record['E2EDK01005'] = [
+            'CURCY'     => $order->amount->currency,
+            'AUGRU'     => '', //(Column: D based on E)
+            'LIFSK'     => 'Y1'
+        ];
+
+        $record['E2EDK14'] = [];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '008',
+            'ORGID'     => '1200'
+        ];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '007',
+            'ORGID'     => '' //(Column: G based on H)
+        ];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '006',
+            'ORGID'     => '00'
+        ];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '012',
+            'ORGID'     => 'TA'
+        ];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '013',
+            'ORGID'     => 'EDI'
+        ];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '016',
+            'ORGID'     => '1200'
+        ];
+
+        $record['E2EDK03'] = [];
+        $record['E2EDK03'][] = [
+            'IDDAT'     => '105',
+            'DATUM'     => ''
+        ];
+        $record['E2EDK03'][] = [
+            'IDDAT'     => '106',
+            'DATUM'     => ''
+        ];
+        $record['E2EDK03'][] = [
+            'IDDAT'     => '012',
+            'DATUM'     => ''
+        ];
+
+        $record['E2EDK05001'] = [
+            'KSCHL'     => 'YF10',
+            'KOTXT'     => 'Versandkosten',
+            'BETRG'     => $order->shippingInformation->shippingCosts //Gross shipping costs
+        ];
+
+        $record['E2EDKA1003GRP'] = [];
+
+        $record['E2EDKA1003GRP'][] = [
+            'E2EDKA1003'    => [
+                'PARVW' => 'AG',
+                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+            ]
+        ];
+
+        $record['E2EDKA1003GRP'][] = [
+            'E2EDKA1003'    => [
+                'PARVW' => 'WE',
+                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+                'NAME1' => $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3,
+                'NAME2' => $order->deliveryAddress->name1,
+                'STRAS' => $order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2,
+                'ORT01' => $order->deliveryAddress->town,
+                'PSTLZ' => $order->deliveryAddress->postalCode,
+                'LAND1' => $order->deliveryAddress->country->isoCode2,
+                'TELF1' => $order->deliveryAddress->phone
+            ]
+        ];
+
+        $record['E2EDKA1003GRP'][] = [
+            'E2EDKA1003'    => [
+                'PARVW' => 'RG',
+                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+            ]
+        ];
+
+        $record['E2EDKA1003GRP'][] = [
+            'E2EDKA1003'    => [
+                'PARVW' => 'RE',
+                'PARTN' => '', //Column A+B
+                'NAME1' => $order->billingAddress->name2 . ' ' . $order->billingAddress->name3,
+                'NAME2' => $order->billingAddress->name1,
+                'STRAS' => $order->billingAddress->address1 . ' ' . $order->billingAddress->address2,
+                'ORT01' => $order->billingAddress->town,
+                'PSTLZ' => $order->billingAddress->postalCode,
+                'LAND1' => $order->billingAddress->country->isoCode2,
+                'TELF1' => ''
+            ]
+        ];
+
+        $record['E2EDK02'] = [
+            'QUALF'     => '017',
+            'BELNR'     => $order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID),
+            'DATUM'     => $order->dates->filter(
+                                function ($date) {
+                                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+                                }
+                            )->first()->date->isoFormat("DD/MM/YYYY")
+        ];
+
+        $record['E2EDKT1002GRP'][] = [
+            'E2EDKT100'    => [
+                'TDID'          => 'FIS1',
+                'TSSPRAS'       => 'D',
+                'TSSPRAS_ISO'   => $order->billingAddress->country->isoCode2,
+                'TDLINE'        => '' //is only populated for Amazon Business buyers - when buyer has a VAT ID
+            ]
+        ];
+
+        //order records
+        $counterTen = 10;
+        /** @var OrderItem $orderItem */
+        foreach ($order->orderItems as $orderItem) {
+            if ($orderItem->typeId === OrderItemType::VARIATION) {
+                $record['E2EDP01011GRP']['E2EDP0101']['POSEX'] = $counterTen;
+                $record['E2EDP01011GRP']['E2EDP0101']['MENGE'] = $orderItem->quantity;
+                $record['E2EDP01011GRP']['E2EDP0101']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross; //Order item amounts: Price gross
+                $record['E2EDP01011GRP']['E2EDP19003']['QUALF'] = '002';
+                $record['E2EDP01011GRP']['E2EDP19003']['IDTNR'] = $orderItem->variation->number;
+                $counterTen += 10;
+            }
+        }
 
         $this->saveRecord($order->id, $record);
     }
@@ -209,12 +381,12 @@ class OrderExportService
         } else {
             $senderId = 86;
         }
-        $resultedXML = '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<import_batch version_number="1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  	<!-- HEADER STARTS HERE--> 
-	<batch_date_time>'.$generationTime.'</batch_date_time>
-	<batch_number>'.$batchNo.'</batch_number> <!-- Batch Number is continous, starting with 01 -->
-	<sender_id>'.$senderId.'</sender_id>
+        $resultedXML = '<?xml version="1.0"?>
+<Send 
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns="http://Microsoft.LobServices.Sap/2007/03/Idoc/3/ORDERS05//750/Send"
+>
+<idocData>
 ';
         if ($this->pluginVariant == 'AT') {
             $resultedXML .= '<entity>5</entity>';
