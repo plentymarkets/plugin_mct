@@ -49,6 +49,21 @@ class OrderExportService
    private $marketplaceValueMapping;
 
     /**
+     * @var array
+     */
+    private $shippingValueMapping;
+
+    /**
+     * @var array
+     */
+    private $qualf7ValueMapping;
+
+    /**
+     * @var array
+     */
+    private $qualf12ValueMapping;
+
+    /**
      * @param ClientForSFTP $ftpClient
      */
     public function __construct(
@@ -62,6 +77,9 @@ class OrderExportService
         $this->totalOrdersPerBatch  = $this->configRepository->getTotalOrdersPerBatch();
         $this->orderRepository      = $orderRepository;
         $this->marketplaceValueMapping = $this->getMarketplaceValueMapping();
+        $this->shippingValueMapping = $this->getShippingValueMapping();
+        $this->qualf7ValueMapping   = $this->getQualf7ValueMapping();
+        $this->qualf12ValueMapping  = $this->getQualf12ValueMapping();
     }
 
     private function getMarketplaceValueMapping()
@@ -72,11 +90,62 @@ class OrderExportService
             '143.00' => '5025855'
         ];
     }
+
+    private function getShippingValueMapping()
+    {
+        return [
+            '10' => 'PRI',
+            '11' => 'FBA',
+            '12' => 'ASF',
+            '14' => '5'
+        ];
+    }
+
+    private function getQualf7ValueMapping()
+    {
+        return [
+            '9.00' => '50',
+
+        ];
+    }
+
+    private function getQualf12ValueMapping()
+    {
+        return [
+
+        ];
+    }
+
+    private function getValueBasedOnShippingProfile(float $shippingProfileId)
+    {
+        if (isset($this->shippingValueMapping[$shippingProfileId])) {
+            return $this->shippingValueMapping[$shippingProfileId];
+        }
+        return 'AMP';
+    }
+
+    private function getValueForQualf007(float $referrerId)
+    {
+        if (isset($this->qualf7ValueMapping[$referrerId])) {
+            return $this->qualf7ValueMapping[$referrerId];
+        }
+        return '21';
+    }
+
+    private function getValueForQualf012(float $referrerId)
+    {
+        if (isset($this->qualf12ValueMapping[$referrerId])) {
+            return $this->qualf12ValueMapping[$referrerId];
+        }
+        return 'TA';
+    }
+
     private function getValueBasedOnMarketplace(float $referrerId)
     {
         if (isset($this->marketplaceValueMapping[$referrerId])) {
-            return $this->marketplaceValueMapping[$referrerId];
+            return '000' . $this->marketplaceValueMapping[$referrerId];
         }
+        return '';
         /*
         /** @var OrderReferrerRepositoryContract $orderReferrerRepo */
         /*$orderReferrerRepo = pluginApp(OrderReferrerRepositoryContract::class);
@@ -92,7 +161,6 @@ class OrderExportService
             }
         }
         */
-        return '';
     }
 
     /**
@@ -109,13 +177,13 @@ class OrderExportService
             'MESCOD'    => 'AFT',
             'SNDPOR'    => 'BIZP_TRFC',
             'SNDPRT'    => 'KU',
-            'SNDPRN'    => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+            'SNDPRN'    => $this->getValueBasedOnMarketplace($order->referrerId),
             'RCVPOR'    => 'SAPPW1'
         ];
 
         $record['E2EDK01005'] = [
             'CURCY'     => $order->amount->currency,
-            'AUGRU'     => '', //(Column: D based on E)
+            'AUGRU'     => $this->getValueBasedOnShippingProfile($order->shippingProfileId),
             'LIFSK'     => 'Y1'
         ];
 
@@ -126,7 +194,7 @@ class OrderExportService
         ];
         $record['E2EDK14'][] = [
             'QUALF'     => '007',
-            'ORGID'     => '' //(Column: G based on H)
+            'ORGID'     => $this->getValueForQualf007($order->referrerId)
         ];
         $record['E2EDK14'][] = [
             'QUALF'     => '006',
@@ -134,7 +202,7 @@ class OrderExportService
         ];
         $record['E2EDK14'][] = [
             'QUALF'     => '012',
-            'ORGID'     => 'TA'
+            'ORGID'     => $this->getValueForQualf012($order->referrerId)
         ];
         $record['E2EDK14'][] = [
             'QUALF'     => '013',
@@ -162,7 +230,7 @@ class OrderExportService
         $record['E2EDK05001'] = [
             'KSCHL'     => 'YF10',
             'KOTXT'     => 'Versandkosten',
-            'BETRG'     => $order->shippingInformation->shippingCosts //Gross shipping costs
+            'BETRG'     => $order->shippingInformation->shippingCosts
         ];
 
         $record['E2EDKA1003GRP'] = [];
@@ -170,14 +238,14 @@ class OrderExportService
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'AG',
-                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
             ]
         ];
 
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'WE',
-                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
                 'NAME1' => $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3,
                 'NAME2' => $order->deliveryAddress->name1,
                 'STRAS' => $order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2,
@@ -191,14 +259,14 @@ class OrderExportService
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'RG',
-                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId), //(Column: A based on B)
+                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
             ]
         ];
 
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'RE',
-                'PARTN' => '', //Column A+B
+                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
                 'NAME1' => $order->billingAddress->name2 . ' ' . $order->billingAddress->name3,
                 'NAME2' => $order->billingAddress->name1,
                 'STRAS' => $order->billingAddress->address1 . ' ' . $order->billingAddress->address2,
@@ -232,7 +300,7 @@ class OrderExportService
         $counterTen = 10;
         /** @var OrderItem $orderItem */
         foreach ($order->orderItems as $orderItem) {
-            if ($orderItem->typeId === OrderItemType::VARIATION) {
+            if ($orderItem->typeId === OrderItemType::TYPE_VARIATION) {
                 $record['E2EDP01011GRP']['E2EDP0101']['POSEX'] = $counterTen;
                 $record['E2EDP01011GRP']['E2EDP0101']['MENGE'] = $orderItem->quantity;
                 $record['E2EDP01011GRP']['E2EDP0101']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross; //Order item amounts: Price gross
@@ -330,7 +398,7 @@ class OrderExportService
      * @param $array
      * @return string
      */
-    public function arrayToXml($array): string
+    public function arrayToXml(array $array, string $parentTag = ''): string
     {
         if (($array === null) || (count($array) == 0)){
             return '';
@@ -339,22 +407,15 @@ class OrderExportService
         $str = '';
 
         foreach ($array as $k => $v) {
-            if ($k === 'client_id'){
-                continue;
-            }
             if (is_array($v)) {
                 if (count($v) == 0){
                     $str .= "<$k />\n";
                     continue;
                 }
                 if (is_int($k)){
-                    $str .= "<order_line>\n" . $this->arrayToXml($v) . "</order_line>\n";
+                    $str .= "<$parentTag>\n" . $this->arrayToXml($v) . "</$parentTag>\n";
                 } else {
-                    if (is_string($k) && ($k === 'order_lines')){
-                        $str .= $this->arrayToXml($v);
-                    } else {
-                        $str .= "<$k>\n" . $this->arrayToXml($v) . "</$k>\n";
-                    }
+                    $str .= "<$k>\n" . $this->arrayToXml($v, $k) . "</$k>\n";
                 }
             }
             else {
@@ -376,51 +437,17 @@ class OrderExportService
      */
     public function generateXMLFromOrderData($exportList, $generationTime, $batchNo): string
     {
-        if ($this->pluginVariant == 'DE'){
-            $senderId = 89;
-        } else {
-            $senderId = 86;
-        }
         $resultedXML = '<?xml version="1.0"?>
 <Send 
     xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
     xmlns="http://Microsoft.LobServices.Sap/2007/03/Idoc/3/ORDERS05//750/Send"
 >
-<idocData>
 ';
-        if ($this->pluginVariant == 'AT') {
-            $resultedXML .= '<entity>5</entity>';
-        }
-
-        $totalQuantities = 0;
-        $totalCustomers = 0;
-        $customerList = [];
 
         /** @var TableRow $order */
         foreach ($exportList as $order){
             $orderData = json_decode($order->exportedData, true);
-            $resultedXML .= $this->arrayToXml(['record' => $orderData]);
-
-            foreach ($orderData['order']['order_details'] as $orderLine){
-                $totalQuantities += $orderLine['quantity'];
-            }
-
-            $currentCustomer = $orderData['order']['client_id'];
-            if ((int)$currentCustomer == -1){
-                $totalCustomers++;
-            } else {
-                if (!in_array($currentCustomer, $customerList)) {
-                    $customerList[] = $currentCustomer;
-                    $totalCustomers++;
-                }
-            }
-        }
-        if ($this->pluginVariant == 'DE') {
-            $resultedXML .= '
-<total_orders>' . count($exportList) . '</total_orders> 
-<total_quantity>' . $totalQuantities . '</total_quantity> 
-<total_customers>' . $totalCustomers . '</total_customers> 
-<total_members>' . $totalCustomers . '</total_members>';
+            $resultedXML .= $this->arrayToXml(['idocData' => $orderData]);
         }
         $resultedXML .= "\n</import_batch>";
 
@@ -525,10 +552,6 @@ class OrderExportService
         $thisTime = Carbon::now();
         $generationTime = $thisTime->toDateTimeString();
         $batchNo = $this->getBatchNumber();
-        if (($this->pluginVariant == 'AT') && ((int)$batchNo == 2000)) {
-            $batchNo = "2001";
-            $settingsRepository->incrementBatchNumber();
-        }
         $xmlContent = $this->generateXMLFromOrderData($exportList, $generationTime, $batchNo);
         if (!$this->sendToFTP(
             $xmlContent,

@@ -36,24 +36,6 @@
           "label": "Config.folderPath",
           "options": {}
         },
-        "pluginVariant": {
-          "type": "selectBox",
-          "required": false,
-          "label": "Config.pluginVariant",
-          "options": {
-            "defaultValue": "0",
-            "selectBoxValues": [
-              {
-                "value": "0",
-                "caption": "DE"
-              },
-              {
-                "value": "1",
-                "caption": "AT"
-              }
-            ]
-          }
-        },
         "batchCount": {
           "type": "inputText",
           "required": false,

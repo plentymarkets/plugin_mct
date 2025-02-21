@@ -27,7 +27,8 @@
     "serviceProvider": "MCT\\Providers\\PluginServiceProvider",
     "runOnBuild": [
         "MCT\\Migrations\\CreateMCTExportTable",
-        "MCT\\Migrations\\CreateMCTSettingsTable"
+        "MCT\\Migrations\\CreateMCTSettingsTable",
+        "MCT\\Migrations\\UseTextInExportTable"
     ],
     "dependencies": {
         "guzzlehttp/guzzle": "^7.0",
