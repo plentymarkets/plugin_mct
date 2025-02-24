@@ -36,18 +36,6 @@ class PluginConfiguration
     /**
      * @return int
      */
-    public function getTotalOrdersPerBatch()
-    {
-        $totalOrders = $this->configRepository->get(self::PLUGIN_NAME . '.batchCount');
-        if ($totalOrders == null) {
-            return 50;
-        }
-        return (int)$totalOrders;
-    }
-
-    /**
-     * @return int
-     */
     public function getCronInterval()
     {
         $cronInterval = $this->configRepository->get(self::PLUGIN_NAME . '.cronInterval');

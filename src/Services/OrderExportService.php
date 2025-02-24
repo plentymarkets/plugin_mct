@@ -34,11 +34,6 @@ class OrderExportService
     private $configRepository;
 
     /**
-     * @var int
-     */
-    private $totalOrdersPerBatch;
-
-    /**
      * @var OrderRepositoryContract
      */
    private $orderRepository;
@@ -74,7 +69,6 @@ class OrderExportService
     {
         $this->ftpClient            = $ftpClient;
         $this->configRepository     = $configRepository;
-        $this->totalOrdersPerBatch  = $this->configRepository->getTotalOrdersPerBatch();
         $this->orderRepository      = $orderRepository;
         $this->marketplaceValueMapping = $this->getMarketplaceValueMapping();
         $this->shippingValueMapping = $this->getShippingValueMapping();
@@ -85,9 +79,12 @@ class OrderExportService
     private function getMarketplaceValueMapping()
     {
         return [
-            '150.00' => '5028142',
             '102.01' => '5028259',
-            '143.00' => '5025855'
+            '160.10' => '5028143',
+            '2.08'   => '1999971',
+            '4.01'   => '5024143',
+            '4.06'   => '5024143',
+            '9.00'   => '5029170'
         ];
     }
 
@@ -145,7 +142,7 @@ class OrderExportService
         if (isset($this->marketplaceValueMapping[$referrerId])) {
             return '000' . $this->marketplaceValueMapping[$referrerId];
         }
-        return '';
+        return '1234567';
         /*
         /** @var OrderReferrerRepositoryContract $orderReferrerRepo */
         /*$orderReferrerRepo = pluginApp(OrderReferrerRepositoryContract::class);
@@ -246,10 +243,10 @@ class OrderExportService
             'E2EDKA1003'    => [
                 'PARVW' => 'WE',
                 'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
-                'NAME1' => $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3,
-                'NAME2' => $order->deliveryAddress->name1,
-                'STRAS' => $order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2,
-                'ORT01' => $order->deliveryAddress->town,
+                'NAME1' => substr($order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3, 0, 35),
+                'NAME2' => substr($order->deliveryAddress->name1, 0, 35),
+                'STRAS' => substr($order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2, 0, 35),
+                'ORT01' => substr($order->deliveryAddress->town, 0, 35),
                 'PSTLZ' => $order->deliveryAddress->postalCode,
                 'LAND1' => $order->deliveryAddress->country->isoCode2,
                 'TELF1' => $order->deliveryAddress->phone
@@ -267,24 +264,34 @@ class OrderExportService
             'E2EDKA1003'    => [
                 'PARVW' => 'RE',
                 'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
-                'NAME1' => $order->billingAddress->name2 . ' ' . $order->billingAddress->name3,
-                'NAME2' => $order->billingAddress->name1,
-                'STRAS' => $order->billingAddress->address1 . ' ' . $order->billingAddress->address2,
-                'ORT01' => $order->billingAddress->town,
+                'NAME1' => substr($order->billingAddress->name2 . ' ' . $order->billingAddress->name3, 0, 35),
+                'NAME2' => substr($order->billingAddress->name1, 0, 35),
+                'STRAS' => substr($order->billingAddress->address1 . ' ' . $order->billingAddress->address2, 0, 35),
+                'ORT01' => substr($order->billingAddress->town, 0, 35),
                 'PSTLZ' => $order->billingAddress->postalCode,
                 'LAND1' => $order->billingAddress->country->isoCode2,
                 'TELF1' => ''
             ]
         ];
 
-        $record['E2EDK02'] = [
-            'QUALF'     => '017',
-            'BELNR'     => $order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID),
+        $record['E2EDK02'] = [];
+        $record['E2EDK02'][] = [
+            'QUALF'     => '001',
+            'BELNR'     => substr(substr($order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID), 4), 0, 18),
             'DATUM'     => $order->dates->filter(
-                                function ($date) {
-                                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
-                                }
-                            )->first()->date->isoFormat("DD/MM/YYYY")
+                function ($date) {
+                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+                }
+            )->first()->date->isoFormat("DD/MM/YYYY")
+        ];
+        $record['E2EDK02'][] = [
+            'QUALF'     => '017',
+            'BELNR'     => substr(substr($order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID), 4), 0, 18),
+            'DATUM'     => $order->dates->filter(
+                function ($date) {
+                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+                }
+            )->first()->date->isoFormat("DD/MM/YYYY")
         ];
 
         $record['E2EDKT1002GRP'][] = [
@@ -374,15 +381,6 @@ class OrderExportService
         return false;
     }
 
-    /**
-     * @return string
-     */
-    public function getBatchNumber(): string
-    {
-        $settingsRepository = pluginApp(SettingRepository::class);
-        return $settingsRepository->getBatchNumber();
-    }
-
     public function escapeValue($value)
     {
         $escaped = str_replace('&', '&amp;', $value);
@@ -413,7 +411,10 @@ class OrderExportService
                     continue;
                 }
                 if (is_int($k)){
-                    $str .= "<$parentTag>\n" . $this->arrayToXml($v) . "</$parentTag>\n";
+                    $str .= $this->arrayToXml($v) . "";
+                    if (next($array) !== false){
+                        $str .= "</$parentTag>\n<$parentTag>\n";
+                    }
                 } else {
                     $str .= "<$k>\n" . $this->arrayToXml($v, $k) . "</$k>\n";
                 }
@@ -430,26 +431,18 @@ class OrderExportService
     }
 
     /**
-     * @param TableRow[] $exportList
-     * @param string $generationTime
-     * @param string $batchNo
+     * @param TableRow $order
      * @return string
      */
-    public function generateXMLFromOrderData($exportList, $generationTime, $batchNo): string
+    public function generateXMLFromOrderData(TableRow $order): string
     {
         $resultedXML = '<?xml version="1.0"?>
-<Send 
-    xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-    xmlns="http://Microsoft.LobServices.Sap/2007/03/Idoc/3/ORDERS05//750/Send"
->
+<Send>
 ';
 
-        /** @var TableRow $order */
-        foreach ($exportList as $order){
-            $orderData = json_decode($order->exportedData, true);
-            $resultedXML .= $this->arrayToXml(['idocData' => $orderData]);
-        }
-        $resultedXML .= "\n</import_batch>";
+        $orderData = json_decode($order->exportedData, true);
+        $resultedXML .= $this->arrayToXml(['idocData' => $orderData]);
+        $resultedXML .= "\n</Send>";
 
         return $resultedXML;
     }
@@ -462,7 +455,7 @@ class OrderExportService
      */
     public function sendToFTP(string $xmlContent, string $filePrefix, string $batchNo)
     {
-        $fileName = $filePrefix . '-32-'.$batchNo.'.xml';
+        $fileName = $filePrefix . '_'.$batchNo.'.xml';
         try {
             $this->getLogger(__METHOD__)->info(
                 PluginConfiguration::PLUGIN_NAME . '::general.logMessage',
@@ -496,26 +489,23 @@ class OrderExportService
     }
 
     /**
-     * @param TableRow[]$exportList
-     * @param string $generationTime
+     * @param TableRow $order
+     * @param $generationTime
      * @return void
      */
-    public function markRowsAsSent($exportList, $generationTime): void
+    public function markRowsAsSent(TableRow $order, $generationTime): void
     {
         /** @var ExportDataRepository $exportDataRepository */
         $exportDataRepository = pluginApp(ExportDataRepository::class);
 
         try {
-            /** @var TableRow $order */
-            foreach ($exportList as $order){
-                $exportData = [
-                    'plentyOrderId'    => $order->plentyOrderId,
-                    'exportedData'     => $order->exportedData,
-                    'savedAt'          => $order->savedAt,
-                    'sentAt'           => $generationTime,
-                ];
-                $exportDataRepository->save($exportData);
-            }
+            $exportData = [
+                'plentyOrderId'    => $order->plentyOrderId,
+                'exportedData'     => $order->exportedData,
+                'savedAt'          => $order->savedAt,
+                'sentAt'           => $generationTime,
+            ];
+            $exportDataRepository->save($exportData);
         } catch (\Throwable $e) {
             $this->getLogger(__METHOD__)->error(
                 PluginConfiguration::PLUGIN_NAME . '::error.updateMarkError',
@@ -534,7 +524,7 @@ class OrderExportService
         /** @var ExportDataRepository $exportDataRepository */
         $exportDataRepository = pluginApp(ExportDataRepository::class);
         try {
-            $exportList = $exportDataRepository->listUnsent($this->totalOrdersPerBatch);
+            $exportList = $exportDataRepository->listUnsent();
         } catch (\Throwable $e) {
             $this->getLogger(__METHOD__)->error(PluginConfiguration::PLUGIN_NAME . '::error.readExportError',
                 [
@@ -547,23 +537,20 @@ class OrderExportService
             return false;
         }
 
-        $settingsRepository = pluginApp(SettingRepository::class);
-
-        $thisTime = Carbon::now();
-        $generationTime = $thisTime->toDateTimeString();
-        $batchNo = $this->getBatchNumber();
-        $xmlContent = $this->generateXMLFromOrderData($exportList, $generationTime, $batchNo);
-        if (!$this->sendToFTP(
-            $xmlContent,
-            $thisTime->isoFormat("DDMMYY") . '-' . $thisTime->isoFormat("HHmm"),
-            $batchNo
-        )){
-            return false;
+        /** @var TableRow $order */
+        foreach ($exportList as $order) {
+            $thisTime = Carbon::now();
+            $generationTime = $thisTime->toDateTimeString();
+            $xmlContent = $this->generateXMLFromOrderData($order);
+            if (!$this->sendToFTP(
+                $xmlContent,
+                $thisTime->isoFormat("YYYYMMDD") . '_' . $thisTime->isoFormat("HHmmss"),
+                $order->plentyOrderId
+            )) {
+                return false;
+            }
+            $this->markRowsAsSent($order, $generationTime);
         }
-
-        $settingsRepository->incrementBatchNumber();
-
-        $this->markRowsAsSent($exportList, $generationTime);
 
         return true;
     }
