@@ -5,6 +5,8 @@ namespace MCT\Services;
 use Carbon\Carbon;
 use MCT\Clients\ClientForSFTP;
 use MCT\Configuration\PluginConfiguration;
+use MCT\Helpers\MappingHelper;
+use MCT\Helpers\OrderHelper;
 use MCT\Models\TableRow;
 use MCT\Repositories\ExportDataRepository;
 use MCT\Repositories\SettingRepository;
@@ -39,125 +41,35 @@ class OrderExportService
    private $orderRepository;
 
     /**
-     * @var array
+     * @var OrderHelper
      */
-   private $marketplaceValueMapping;
+    private $orderHelper;
 
     /**
-     * @var array
+     * @var MappingHelper
      */
-    private $shippingValueMapping;
-
-    /**
-     * @var array
-     */
-    private $qualf7ValueMapping;
-
-    /**
-     * @var array
-     */
-    private $qualf12ValueMapping;
+    private $mappingHelper;
 
     /**
      * @param ClientForSFTP $ftpClient
+     * @param PluginConfiguration $configRepository
+     * @param OrderRepositoryContract $orderRepository
+     * @param OrderHelper $orderHelper
+     * @param MappingHelper $mappingHelper
      */
     public function __construct(
         ClientForSFTP           $ftpClient,
         PluginConfiguration     $configRepository,
-        OrderRepositoryContract $orderRepository
+        OrderRepositoryContract $orderRepository,
+        OrderHelper             $orderHelper,
+        MappingHelper           $mappingHelper
     )
     {
         $this->ftpClient            = $ftpClient;
         $this->configRepository     = $configRepository;
         $this->orderRepository      = $orderRepository;
-        $this->marketplaceValueMapping = $this->getMarketplaceValueMapping();
-        $this->shippingValueMapping = $this->getShippingValueMapping();
-        $this->qualf7ValueMapping   = $this->getQualf7ValueMapping();
-        $this->qualf12ValueMapping  = $this->getQualf12ValueMapping();
-    }
-
-    private function getMarketplaceValueMapping()
-    {
-        return [
-            '102.01' => '5028259',
-            '160.10' => '5028143',
-            '2.08'   => '1999971',
-            '4.01'   => '5024143',
-            '4.06'   => '5024143',
-            '9.00'   => '5029170'
-        ];
-    }
-
-    private function getShippingValueMapping()
-    {
-        return [
-            '10' => 'PRI',
-            '11' => 'FBA',
-            '12' => 'ASF',
-            '14' => '5'
-        ];
-    }
-
-    private function getQualf7ValueMapping()
-    {
-        return [
-            '9.00' => '50',
-
-        ];
-    }
-
-    private function getQualf12ValueMapping()
-    {
-        return [
-
-        ];
-    }
-
-    private function getValueBasedOnShippingProfile(float $shippingProfileId)
-    {
-        if (isset($this->shippingValueMapping[$shippingProfileId])) {
-            return $this->shippingValueMapping[$shippingProfileId];
-        }
-        return 'AMP';
-    }
-
-    private function getValueForQualf007(float $referrerId)
-    {
-        if (isset($this->qualf7ValueMapping[$referrerId])) {
-            return $this->qualf7ValueMapping[$referrerId];
-        }
-        return '21';
-    }
-
-    private function getValueForQualf012(float $referrerId)
-    {
-        if (isset($this->qualf12ValueMapping[$referrerId])) {
-            return $this->qualf12ValueMapping[$referrerId];
-        }
-        return 'TA';
-    }
-
-    private function getValueBasedOnMarketplace(float $referrerId)
-    {
-        if (isset($this->marketplaceValueMapping[$referrerId])) {
-            return '000' . $this->marketplaceValueMapping[$referrerId];
-        }
-        return '1234567';
-        /*
-        /** @var OrderReferrerRepositoryContract $orderReferrerRepo */
-        /*$orderReferrerRepo = pluginApp(OrderReferrerRepositoryContract::class);
-
-        $referrers = $orderReferrerRepo->getList();
-        if(!empty($referrers))
-        {
-            foreach($referrers as $referrer)
-            {
-                if($referrerId === $referrer->referrer_id)
-                {
-                }
-            }
-        }
-        */
+        $this->orderHelper          = $orderHelper;
+        $this->mappingHelper        = $mappingHelper;
     }
 
     /**
@@ -174,32 +86,37 @@ class OrderExportService
             'MESCOD'    => 'AFT',
             'SNDPOR'    => 'BIZP_TRFC',
             'SNDPRT'    => 'KU',
-            'SNDPRN'    => $this->getValueBasedOnMarketplace($order->referrerId),
+            'SNDPRN'    => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
             'RCVPOR'    => 'SAPPW1'
         ];
 
         $record['E2EDK01005'] = [
             'CURCY'     => $order->amount->currency,
-            'AUGRU'     => $this->getValueBasedOnShippingProfile($order->shippingProfileId),
+            'KUNDEUINR' => '',
+            'AUGRU'     => $this->orderHelper->getValueBasedOnShippingProfile($order->shippingProfileId),
             'LIFSK'     => 'Y1'
         ];
 
         $record['E2EDK14'] = [];
         $record['E2EDK14'][] = [
-            'QUALF'     => '008',
-            'ORGID'     => '1200'
-        ];
-        $record['E2EDK14'][] = [
-            'QUALF'     => '007',
-            'ORGID'     => $this->getValueForQualf007($order->referrerId)
-        ];
-        $record['E2EDK14'][] = [
             'QUALF'     => '006',
             'ORGID'     => '00'
         ];
         $record['E2EDK14'][] = [
+            'QUALF'     => '007',
+            'ORGID'     => $this->orderHelper->getValueForQualf007($order->referrerId)
+        ];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '008',
+            'ORGID'     => '1200'
+        ];
+        $record['E2EDK14'][] = [
+            'QUALF'     => '010',
+            'ORGID'     => 'AFT'
+        ];
+        $record['E2EDK14'][] = [
             'QUALF'     => '012',
-            'ORGID'     => $this->getValueForQualf012($order->referrerId)
+            'ORGID'     => $this->orderHelper->getValueForQualf012($order->referrerId)
         ];
         $record['E2EDK14'][] = [
             'QUALF'     => '013',
@@ -213,21 +130,33 @@ class OrderExportService
         $record['E2EDK03'] = [];
         $record['E2EDK03'][] = [
             'IDDAT'     => '105',
-            'DATUM'     => ''
+            'DATUM'     => $order->dates->filter(
+                function ($date) {
+                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+                }
+            )->first()->date->isoFormat("YYYYMMDD")
         ];
         $record['E2EDK03'][] = [
             'IDDAT'     => '106',
-            'DATUM'     => ''
+            'DATUM'     => $order->dates->filter(
+                function ($date) {
+                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+                }
+            )->first()->date->isoFormat("YYYYMMDD")
         ];
         $record['E2EDK03'][] = [
             'IDDAT'     => '012',
-            'DATUM'     => ''
+            'DATUM'     => $order->dates->filter(
+                function ($date) {
+                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+                }
+            )->first()->date->isoFormat("YYYYMMDD")
         ];
 
         $record['E2EDK05001'] = [
             'KSCHL'     => 'YF10',
             'KOTXT'     => 'Versandkosten',
-            'BETRG'     => $order->shippingInformation->shippingCosts
+            'BETRG'     => $this->orderHelper->getShippingCosts($order)
         ];
 
         $record['E2EDKA1003GRP'] = [];
@@ -235,14 +164,18 @@ class OrderExportService
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'AG',
-                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
+                'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
             ]
         ];
 
+        if ((strtoupper($order->deliveryAddress->country->isoCode2) == 'SK') &&
+            ((strlen($order->deliveryAddress->postalCode) < 4) || ($order->deliveryAddress->postalCode != ' '))) {
+            //error - needs to be clarified
+        }
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'WE',
-                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
+                'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
                 'NAME1' => substr($order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3, 0, 35),
                 'NAME2' => substr($order->deliveryAddress->name1, 0, 35),
                 'STRAS' => substr($order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2, 0, 35),
@@ -256,14 +189,18 @@ class OrderExportService
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'RG',
-                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
+                'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
             ]
         ];
 
+        if ((strtoupper($order->billingAddress->country->isoCode2) == 'SK') &&
+            ((strlen($order->billingAddress->postalCode) < 4) || ($order->billingAddress->postalCode != ' '))) {
+            //error - needs to be clarified
+        }
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'RE',
-                'PARTN' => $this->getValueBasedOnMarketplace($order->referrerId),
+                'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
                 'NAME1' => substr($order->billingAddress->name2 . ' ' . $order->billingAddress->name3, 0, 35),
                 'NAME2' => substr($order->billingAddress->name1, 0, 35),
                 'STRAS' => substr($order->billingAddress->address1 . ' ' . $order->billingAddress->address2, 0, 35),
@@ -277,12 +214,12 @@ class OrderExportService
         $record['E2EDK02'] = [];
         $record['E2EDK02'][] = [
             'QUALF'     => '001',
-            'BELNR'     => substr(substr($order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID), 4), 0, 18),
+            'BELNR'     => substr($order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID), 0, 18),
             'DATUM'     => $order->dates->filter(
                 function ($date) {
                     return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
                 }
-            )->first()->date->isoFormat("DD/MM/YYYY")
+            )->first()->date->isoFormat("YYYYMMDD")
         ];
         $record['E2EDK02'][] = [
             'QUALF'     => '017',
@@ -291,15 +228,26 @@ class OrderExportService
                 function ($date) {
                     return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
                 }
-            )->first()->date->isoFormat("DD/MM/YYYY")
+            )->first()->date->isoFormat("YYYYMMDD")
+        ];
+        $record['E2EDK02'][] = [
+            'QUALF'     => '011',
+            'BELNR'     => $order->id,
+            'DATUM'     => $order->dates->filter(
+                function ($date) {
+                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+                }
+            )->first()->date->isoFormat("YYYYMMDD")
         ];
 
         $record['E2EDKT1002GRP'][] = [
-            'E2EDKT100'    => [
+            'E2EDKT1002'    => [
                 'TDID'          => 'FIS1',
                 'TSSPRAS'       => 'D',
                 'TSSPRAS_ISO'   => $order->billingAddress->country->isoCode2,
-                'TDLINE'        => '' //is only populated for Amazon Business buyers - when buyer has a VAT ID
+            ],
+            'E2EDKT2001'    => [
+                'TDLINE'        => $this->orderHelper->getTdline($order)
             ]
         ];
 
@@ -310,7 +258,7 @@ class OrderExportService
             if ($orderItem->typeId === OrderItemType::TYPE_VARIATION) {
                 $record['E2EDP01011GRP']['E2EDP0101']['POSEX'] = $counterTen;
                 $record['E2EDP01011GRP']['E2EDP0101']['MENGE'] = $orderItem->quantity;
-                $record['E2EDP01011GRP']['E2EDP0101']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross; //Order item amounts: Price gross
+                $record['E2EDP01011GRP']['E2EDP0101']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross;
                 $record['E2EDP01011GRP']['E2EDP19003']['QUALF'] = '002';
                 $record['E2EDP01011GRP']['E2EDP19003']['IDTNR'] = $orderItem->variation->number;
                 $counterTen += 10;

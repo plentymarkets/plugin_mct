@@ -36,12 +36,6 @@
           "label": "Config.folderPath",
           "options": {}
         },
-        "batchCount": {
-          "type": "inputText",
-          "required": false,
-          "label": "Config.batchCount",
-          "options": {}
-        },
         "cronInterval": {
           "type": "inputText",
           "required": false,

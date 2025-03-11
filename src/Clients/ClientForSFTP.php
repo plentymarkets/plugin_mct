@@ -52,7 +52,6 @@ class ClientForSFTP
      */
     public function uploadXML(string $filename, string $xmlContent)
     {
-        return [];
         return $this->libraryCall->call(
             PluginConfiguration::PLUGIN_NAME . '::upload_file',
             [
