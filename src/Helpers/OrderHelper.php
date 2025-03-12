@@ -51,7 +51,7 @@ class OrderHelper
         {
             foreach($referrers as $referrer)
             {
-                if(($referrerId === (float)$referrer->referrer_id) && str_starts_with($referrer->name, 'Amazon '))
+                if(($referrerId === (float)$referrer->referrer_id) && (substr($referrer->name, 0, 7) === 'Amazon '))
                 {
                     return true;
                 }
