@@ -4,9 +4,8 @@ namespace MCT\Migrations;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
-use Plenty\DataBase\Migrations\Migration;
 
-class UseTextColumnInExportTable extends Migration
+class UseTextColumnInExportTable
 {
     /**
      * Run the migrations.
