@@ -43,11 +43,21 @@ class OrderHelper
      */
     private function isAmazonOrder(float $referrerId)
     {
-        $referrers = config("module_amazon.referrers");
-        $mfnReferrers = array_filter($referrers, function ($referrer) {
-            return !$referrer["isFba"];
-        });
-        return in_array($referrerId, array_keys($mfnReferrers));
+        /** @var OrderReferrerRepositoryContract $orderReferrerRepo */
+        $orderReferrerRepo = pluginApp(OrderReferrerRepositoryContract::class);
+
+        $referrers = $orderReferrerRepo->getList();
+        if(!empty($referrers))
+        {
+            foreach($referrers as $referrer)
+            {
+                if(($referrerId === (float)$referrer->referrer_id) && str_starts_with($referrer->name, 'Amazon '))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -112,21 +122,6 @@ class OrderHelper
             return '000' . $this->marketplaceValueMapping[$referrerId];
         }
         return '1234567';
-        /*
-        /** @var OrderReferrerRepositoryContract $orderReferrerRepo */
-        /*$orderReferrerRepo = pluginApp(OrderReferrerRepositoryContract::class);
-
-        $referrers = $orderReferrerRepo->getList();
-        if(!empty($referrers))
-        {
-            foreach($referrers as $referrer)
-            {
-                if($referrerId === $referrer->referrer_id)
-                {
-                }
-            }
-        }
-        */
     }
 
     /**
