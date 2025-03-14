@@ -176,7 +176,9 @@ class OrderExportService
                 $order->deliveryAddress->postalCode[3] = ' ';
                     break;
                 default:
-                    $order->deliveryAddress->postalCode = substr_replace($order->deliveryAddress->postalCode, ' ', 4, 0);
+                    $order->deliveryAddress->postalCode = substr($order->deliveryAddress->postalCode, 0, 4)
+                        . ' '
+                        . substr($order->deliveryAddress->postalCode, 4);
                     break;
             }
         }
