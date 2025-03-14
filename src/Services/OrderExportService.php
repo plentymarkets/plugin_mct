@@ -169,8 +169,16 @@ class OrderExportService
         ];
 
         if ((strtoupper($order->deliveryAddress->country->isoCode2) == 'SK') &&
-            ((strlen($order->deliveryAddress->postalCode) < 4) || ($order->deliveryAddress->postalCode != ' '))) {
-            //error - needs to be clarified
+            ((strlen($order->deliveryAddress->postalCode) < 4) || ($order->deliveryAddress->postalCode[3] != ' '))) {
+            switch($order->deliveryAddress->postalCode[3]){
+                case '-':
+                case '_':
+                $order->deliveryAddress->postalCode[3] = ' ';
+                    break;
+                default:
+                    $order->deliveryAddress->postalCode = substr_replace($order->deliveryAddress->postalCode, ' ', 4, 0);
+                    break;
+            }
         }
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
@@ -255,12 +263,18 @@ class OrderExportService
         $counterTen = 10;
         /** @var OrderItem $orderItem */
         foreach ($order->orderItems as $orderItem) {
-            if ($orderItem->typeId === OrderItemType::TYPE_VARIATION) {
+            if (
+                ($orderItem->typeId === OrderItemType::TYPE_VARIATION) ||
+                ($orderItem->typeId === OrderItemType::TYPE_PROMOTIONAL_COUPON)
+            )
+            {
                 $record['E2EDP01011GRP']['E2EDP0101']['POSEX'] = $counterTen;
                 $record['E2EDP01011GRP']['E2EDP0101']['MENGE'] = $orderItem->quantity;
                 $record['E2EDP01011GRP']['E2EDP0101']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross;
                 $record['E2EDP01011GRP']['E2EDP19003']['QUALF'] = '002';
-                $record['E2EDP01011GRP']['E2EDP19003']['IDTNR'] = $orderItem->variation->number;
+                if ($orderItem->typeId === OrderItemType::TYPE_VARIATION) {
+                    $record['E2EDP01011GRP']['E2EDP19003']['IDTNR'] = $orderItem->variation->number;
+                }
                 $counterTen += 10;
             }
         }
