@@ -356,6 +356,39 @@ class OrderExportService
         return $escaped;
     }
 
+    private function GetFieldWithNamespace(string $field){
+        $namesp = '';
+        switch ($field){
+            case 'Send':
+                $namesp = 'xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://Microsoft.LobServices.Sap/2007/03/Idoc/3/ORDERS05//750/Send"';
+                break;
+            case 'EDI_DC40':
+            case 'E2EDK01005':
+            case 'E2EDK14':
+            case 'E2EDK02':
+            case 'E2EDK03':
+            case 'E2EDK05001':
+            case 'E2EDKT1002GRP':
+            case 'E2EDKA1003GRP':
+            case 'E2EDP01011GRP':
+                $namesp = 'xmlns="http://Microsoft.LobServices.Sap/2007/03/Types/Idoc/3/ORDERS05//750"';
+                break;
+            case 'IDOCTYP':
+            case 'MESTYP':
+            case 'MESCOD':
+            case 'SNDPOR':
+            case 'SNDPRT':
+            case 'SNDPRN':
+            case 'RCVPOR':
+                $namesp = 'xmlns="http://Microsoft.LobServices.Sap/2007/03/Types/Idoc/Common/"';
+                break;
+            default:
+                return "<$field>";
+        }
+
+        return "<$field $namesp>";
+    }
+
     /**
      * @param $array
      * @return string
@@ -375,19 +408,19 @@ class OrderExportService
                     continue;
                 }
                 if (is_int($k)){
-                    $str .= $this->arrayToXml($v) . "";
+                    $str .= $this->arrayToXml($v);
                     if (next($array) !== false){
-                        $str .= "</$parentTag>\n<$parentTag>\n";
+                        $str .= "</$parentTag>\n" . $this->GetFieldWithNamespace($parentTag) . "\n";
                     }
                 } else {
-                    $str .= "<$k>\n" . $this->arrayToXml($v, $k) . "</$k>\n";
+                    $str .= $this->GetFieldWithNamespace($k) . "\n" . $this->arrayToXml($v, $k) . "</$k>\n";
                 }
             }
             else {
                 if ((string)$v === ''){
                     $str .= "<$k />\n";
                 } else {
-                    $str .= "<$k>" . $this->escapeValue($v) . "</$k>\n";
+                    $str .= $this->GetFieldWithNamespace($k) . $this->escapeValue($v) . "</$k>\n";
                 }
             }
         }
@@ -401,12 +434,16 @@ class OrderExportService
     public function generateXMLFromOrderData(TableRow $order): string
     {
         $resultedXML = '<?xml version="1.0"?>
-<Send>
 ';
 
         $orderData = json_decode($order->exportedData, true);
-        $resultedXML .= $this->arrayToXml(['idocData' => $orderData]);
-        $resultedXML .= "\n</Send>";
+        $resultedXML .= $this->arrayToXml(
+            [
+                'Send' => [
+                    'idocData' => $orderData
+                ]
+            ]
+        );
 
         return $resultedXML;
     }
