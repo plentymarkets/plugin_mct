@@ -270,9 +270,9 @@ class OrderExportService
                 ($orderItem->typeId === OrderItemType::TYPE_PROMOTIONAL_COUPON)
             )
             {
-                $record['E2EDP01011GRP']['E2EDP0101']['POSEX'] = $counterTen;
-                $record['E2EDP01011GRP']['E2EDP0101']['MENGE'] = $orderItem->quantity;
-                $record['E2EDP01011GRP']['E2EDP0101']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross;
+                $record['E2EDP01011GRP']['E2EDP01011']['POSEX'] = $counterTen;
+                $record['E2EDP01011GRP']['E2EDP01011']['MENGE'] = $orderItem->quantity;
+                $record['E2EDP01011GRP']['E2EDP01011']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross;
                 $record['E2EDP01011GRP']['E2EDP19003']['QUALF'] = '002';
                 if ($orderItem->typeId === OrderItemType::TYPE_VARIATION) {
                     $record['E2EDP01011GRP']['E2EDP19003']['IDTNR'] = $orderItem->variation->number;
