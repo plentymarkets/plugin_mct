@@ -311,7 +311,7 @@ class OrderExportService
 
         $exportData = [
             'plentyOrderId'    => $plentyOrderId,
-            'exportedData'     => json_encode($record),
+            'exportedData'     => json_encode($record, JSON_UNESCAPED_UNICODE),
             'savedAt'          => Carbon::now()->toDateTimeString(),
             'sentdAt'          => '',
         ];
@@ -433,7 +433,7 @@ class OrderExportService
      */
     public function generateXMLFromOrderData(TableRow $order): string
     {
-        $resultedXML = '<?xml version="1.0"?>
+        $resultedXML = '<?xml version="1.0" encoding="UTF-8" ?>
 ';
 
         $orderData = json_decode($order->exportedData, true);
