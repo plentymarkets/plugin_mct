@@ -92,7 +92,7 @@ class OrderExportService
 
         $record['E2EDK01005'] = [
             'CURCY'     => $order->amount->currency,
-            'KUNDEUINR' => '',
+            'KUNDEUINR' => $this->orderHelper->getTaxId($order),
             'AUGRU'     => $this->orderHelper->getValueBasedOnShippingProfile($order->shippingProfileId),
             'LIFSK'     => 'Y1'
         ];

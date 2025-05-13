@@ -64,13 +64,26 @@ class OrderHelper
      * @param Order $order
      * @return string|void
      */
-    public function getTdline(Order $order)
+    public function getTaxId(Order $order)
     {
         if (
             $this->isAmazonOrder($order->referrerId) &&
             ($order->billingAddress->name1 !== '')  &&
             ($order->billingAddress->taxIdNumber !== '')
         ) {
+            return $order->billingAddress->taxIdNumber;
+        }
+        return '';
+    }
+
+    /**
+     * @param Order $order
+     * @return string|void
+     */
+    public function getTdline(Order $order)
+    {
+        $taxId = $this->getTaxId($order);
+        if ($taxId != '') {
             return 'Ihre UST-ID. Nr.: ' . $order->billingAddress->taxIdNumber;
         }
         return '';
