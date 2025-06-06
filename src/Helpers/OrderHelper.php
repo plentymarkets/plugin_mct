@@ -132,9 +132,11 @@ class OrderHelper
     public function getValueBasedOnMarketplace(float $referrerId)
     {
         if (isset($this->marketplaceValueMapping[$referrerId])) {
-            return '000' . $this->marketplaceValueMapping[$referrerId];
+            $value = $this->marketplaceValueMapping[$referrerId];
+        } else {
+            $value = '5024143';
         }
-        return '5024143';
+        return str_pad($value, 10, "0", STR_PAD_LEFT);
     }
 
     /**
