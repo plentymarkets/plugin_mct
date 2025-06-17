@@ -2,6 +2,8 @@
 
 namespace MCT\Helpers;
 
+use Plenty\Modules\Order\Date\Models\OrderDateType;
+
 class MappingHelper
 {
     public function getMarketplaceValueMapping()
@@ -38,5 +40,27 @@ class MappingHelper
     public function getQualf12ValueMapping()
     {
         return [];
+    }
+
+    public function isB2Bclient(string $marketplace){
+        switch ($marketplace){
+            case '5024143':
+            case '5028223':
+            case '5029208':
+            case '5029209':
+            case '5030019':
+                return true;
+        }
+        return false;
+    }
+
+    public function getShippingToDate($order){
+        $orderDate = $order->dates->filter(
+            function ($date) {
+                return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
+            }
+        )->first()->date;
+        $a = $orderDate;
+        return $orderDate->isoFormat("YYYYMMDD");
     }
 }

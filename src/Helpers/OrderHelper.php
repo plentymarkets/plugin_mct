@@ -2,10 +2,13 @@
 
 namespace MCT\Helpers;
 
+use Plenty\Modules\Item\ItemShippingProfiles\Contracts\ItemShippingProfilesRepositoryContract;
 use Plenty\Modules\Order\Models\Order;
 use Plenty\Modules\Order\Models\OrderItem;
 use Plenty\Modules\Order\Models\OrderItemType;
 use Plenty\Modules\Order\Referrer\Contracts\OrderReferrerRepositoryContract;
+use Plenty\Modules\Order\Shipping\Contracts\ParcelServicePresetRepositoryContract;
+use Plenty\Modules\Order\Shipping\ParcelService\Models\ParcelServicePreset;
 
 class OrderHelper
 {
@@ -29,12 +32,35 @@ class OrderHelper
      */
     private $qualf12ValueMapping;
 
-    public function __construct(MappingHelper $mappingHelper)
+    /**
+     * @var int
+     */
+    private $speditionProfileId;
+
+
+    public function __construct(
+        MappingHelper $mappingHelper,
+        ParcelServicePresetRepositoryContract $shippingProfileRepository
+    )
     {
-        $this->marketplaceValueMapping = $mappingHelper->getMarketplaceValueMapping();
-        $this->shippingValueMapping = $mappingHelper->getShippingValueMapping();
-        $this->qualf7ValueMapping   = $mappingHelper->getQualf7ValueMapping();
-        $this->qualf12ValueMapping  = $mappingHelper->getQualf12ValueMapping();
+        $this->marketplaceValueMapping  = $mappingHelper->getMarketplaceValueMapping();
+        $this->shippingValueMapping     = $mappingHelper->getShippingValueMapping();
+        $this->qualf7ValueMapping       = $mappingHelper->getQualf7ValueMapping();
+        $this->qualf12ValueMapping      = $mappingHelper->getQualf12ValueMapping();
+        $this->speditionProfileId       = $this->getSpeditionShippingProfileId($shippingProfileRepository);
+    }
+
+    private function getSpeditionShippingProfileId(ParcelServicePresetRepositoryContract $shippingProfileRepository){
+        /** @var ParcelServicePreset[] $shippingProfiles */
+        $shippingProfiles = $shippingProfileRepository->getPresetList();
+
+        /** @var ParcelServicePreset $shippingProfile */
+        foreach ($shippingProfiles as $shippingProfile) {
+            if ($shippingProfile->backendName === 'Spedition'){
+                return $shippingProfile->id;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -64,26 +90,13 @@ class OrderHelper
      * @param Order $order
      * @return string|void
      */
-    public function getTaxId(Order $order)
+    public function getTdline(Order $order)
     {
         if (
             $this->isAmazonOrder($order->referrerId) &&
             ($order->billingAddress->name1 !== '')  &&
             ($order->billingAddress->taxIdNumber !== '')
         ) {
-            return $order->billingAddress->taxIdNumber;
-        }
-        return '';
-    }
-
-    /**
-     * @param Order $order
-     * @return string|void
-     */
-    public function getTdline(Order $order)
-    {
-        $taxId = $this->getTaxId($order);
-        if ($taxId != '') {
             return 'Ihre UST-ID. Nr.: ' . $order->billingAddress->taxIdNumber;
         }
         return '';
@@ -123,6 +136,14 @@ class OrderHelper
             return $this->qualf12ValueMapping[$referrerId];
         }
         return 'TA';
+    }
+
+    public function itemHasSpeditionShippingProfile(int $itemShippingProfile)
+    {
+        if ($itemShippingProfile == $this->speditionProfileId){
+            return true;
+        }
+        return false;
     }
 
     /**

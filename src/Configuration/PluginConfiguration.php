@@ -80,9 +80,9 @@ class PluginConfiguration
         ];
     }
 
-    public function getProcessedOrderStatus(): string
+    public function getFaultyOrderStatus(): string
     {
-        $orderStatus = $this->getConfigValue('processedStatus');
+        $orderStatus = $this->getConfigValue('faultyStatus');
         if (!is_null($orderStatus) && ((int)$orderStatus > 0)){
             return $orderStatus;
         }

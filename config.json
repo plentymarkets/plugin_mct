@@ -42,10 +42,10 @@
           "label": "Config.cronInterval",
           "options": {}
         },
-        "processedStatus": {
+        "faultyStatus": {
           "type": "inputText",
           "required": false,
-          "label": "Config.processedStatus",
+          "label": "Config.faultyStatus",
           "options": {}
         }
       }

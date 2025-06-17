@@ -138,11 +138,7 @@ class OrderExportService
         ];
         $record['E2EDK03'][] = [
             'IDDAT'     => '106',
-            'DATUM'     => $order->dates->filter(
-                function ($date) {
-                    return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
-                }
-            )->first()->date->isoFormat("YYYYMMDD")
+            'DATUM'     => $this->mappingHelper->getShippingToDate($order)
         ];
         $record['E2EDK03'][] = [
             'IDDAT'     => '012',
@@ -168,26 +164,68 @@ class OrderExportService
             ]
         ];
 
+        //check for wrong SK postal code
         if ((strtoupper($order->deliveryAddress->country->isoCode2) == 'SK') &&
-            ((strlen($order->deliveryAddress->postalCode) < 4) || ($order->deliveryAddress->postalCode[3] != ' '))) {
-            switch($order->deliveryAddress->postalCode[3]){
-                case '-':
-                case '_':
-                $order->deliveryAddress->postalCode[3] = ' ';
-                    break;
-                default:
-                    $order->deliveryAddress->postalCode = substr($order->deliveryAddress->postalCode, 0, 4)
-                        . ' '
-                        . substr($order->deliveryAddress->postalCode, 4);
-                    break;
+            (!preg_match("/^\d{3} \d{2}$/", $order->deliveryAddress->postalCode))){
+
+            //try to fix if missing SPACE between parts or using '-' or '_' instead of SPACE
+            if (preg_match('/^\d{5}$/', $order->deliveryAddress->postalCode) ||
+                preg_match("/^\d{3}[-_]\d{2}$/", $order->deliveryAddress->postalCode)) {
+                $order->deliveryAddress->postalCode = substr($order->deliveryAddress->postalCode, 0, 3)
+                    . ' '
+                    . substr($order->deliveryAddress->postalCode, -2);
+            } else {
+                $this->getLogger(__METHOD__)
+                    ->addReference('orderId', $order->id)
+                    ->error(PluginConfiguration::PLUGIN_NAME . '::error.skPostalCode', [
+                        'message'       => 'The SK postal code has a wrong format',
+                        'orderId'       => $order->id
+                    ]);
+                $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
+                if ($statusOfFaultyOrder != ''){
+                    $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                }
+                return;
             }
         }
+
+        //default values for the names, according to initial specifications
+        $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
+        $mctDeliveryName2 = $order->deliveryAddress->name1;
+
+        //special cases for name1 and name2, based on later specs
+        if (
+            ($order->deliveryAddress->name1 !== '') &&
+            ($order->deliveryAddress->name2 === '') &&
+            ($order->deliveryAddress->name3 === '') &&
+            ($order->deliveryAddress->name4 === '')
+        ) {
+            $mctDeliveryName1 = $order->deliveryAddress->name1;
+            if (strlen($mctDeliveryName1) >35){
+                $mctDeliveryName2 = substr($mctDeliveryName1, 36);
+                $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+            }
+        }
+
+        if (
+            ($order->deliveryAddress->name1 === '') &&
+            ($order->deliveryAddress->name2 !== '') &&
+            ($order->deliveryAddress->name3 !== '') &&
+            ($order->deliveryAddress->name4 === '')
+        ) {
+            $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
+            if (strlen($mctDeliveryName1) > 35){
+                $mctDeliveryName2 = substr($mctDeliveryName1, 36);
+                $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+            }
+        }
+
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'WE',
                 'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
-                'NAME1' => substr($order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3, 0, 35),
-                'NAME2' => substr($order->deliveryAddress->name1, 0, 35),
+                'NAME1' => substr($mctDeliveryName1, 0, 35),
+                'NAME2' => substr($mctDeliveryName2, 0, 35),
                 'STRAS' => substr($order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2, 0, 35),
                 'ORT01' => substr($order->deliveryAddress->town, 0, 35),
                 'PSTLZ' => $order->deliveryAddress->postalCode,
@@ -207,12 +245,44 @@ class OrderExportService
             ((strlen($order->billingAddress->postalCode) < 4) || ($order->billingAddress->postalCode != ' '))) {
             //error - needs to be clarified
         }
+
+        //default values for the names, according to initial specifications
+        $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
+        $mctBillingName2 = $order->billingAddress->name1;
+
+        //special cases for name1 and name2, based on later specs
+        if (
+            ($order->billingAddress->name1 !== '') &&
+            ($order->billingAddress->name2 === '') &&
+            ($order->billingAddress->name3 === '') &&
+            ($order->billingAddress->name4 === '')
+        ) {
+            $mctBillingName1 = $order->billingAddress->name1;
+            if (strlen($mctBillingName1) > 35){
+                $mctBillingName2 = substr($mctBillingName1, 36);
+                $mctBillingName1 = substr($mctBillingName1, 0, 35);
+            }
+        }
+
+        if (
+            ($order->billingAddress->name1 === '') &&
+            ($order->billingAddress->name2 !== '') &&
+            ($order->billingAddress->name3 !== '') &&
+            ($order->billingAddress->name4 === '')
+        ) {
+            $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
+            if (strlen($mctBillingName1) > 35){
+                $mctBillingName2 = substr($mctBillingName1, 36);
+                $mctBillingName1 = substr($mctBillingName1, 0, 35);
+            }
+        }
+
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'RE',
                 'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
-                'NAME1' => substr($order->billingAddress->name2 . ' ' . $order->billingAddress->name3, 0, 35),
-                'NAME2' => substr($order->billingAddress->name1, 0, 35),
+                'NAME1' => substr($mctBillingName1, 0, 35),
+                'NAME2' => substr($mctBillingName2, 0, 35),
                 'STRAS' => substr($order->billingAddress->address1 . ' ' . $order->billingAddress->address2, 0, 35),
                 'ORT01' => substr($order->billingAddress->town, 0, 35),
                 'PSTLZ' => $order->billingAddress->postalCode,
@@ -250,16 +320,25 @@ class OrderExportService
             )->first()->date->isoFormat("YYYYMMDD")
         ];
 
-        $record['E2EDKT1002GRP'][] = [
-            'E2EDKT1002'    => [
-                'TDID'          => 'FIS1',
-                'TSSPRAS'       => 'D',
-                'TSSPRAS_ISO'   => $order->billingAddress->country->isoCode2,
-            ],
-            'E2EDKT2001'    => [
-                'TDLINE'        => $this->orderHelper->getTdline($order)
-            ]
-        ];
+        if ($this->orderHelper->getTaxId($order) != '') {
+            $record['E2EDKT1002GRP'][] = [
+                'E2EDKT1002' => [
+                    'TDID' => 'FIS1',
+                    'TSSPRAS' => 'D',
+                    'TSSPRAS_ISO' => $order->billingAddress->country->isoCode2,
+                ],
+                'E2EDKT2001' => [
+                    'TDLINE' => $this->orderHelper->getTdline($order)
+                ]
+            ];
+        } else {
+            $record['E2EDKT1002GRP'][] = [
+                'E2EDKT1002' => [
+                    'TSSPRAS' => '',
+                    'TSSPRAS_ISO' => '',
+                ]
+            ];
+        }
 
         //order records
         $counterTen = 10;
@@ -273,7 +352,11 @@ class OrderExportService
                 $itemData = [];
                 $itemData['E2EDP01011']['POSEX'] = $counterTen;
                 $itemData['E2EDP01011']['MENGE'] = $orderItem->quantity;
-                $itemData['E2EDP01011']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross;
+                if ($this->mappingHelper->isB2Bclient($this->orderHelper->getValueBasedOnMarketplace($order->referrerId))){
+                    $itemData['E2EDP01011']['VPREI'] = $orderItem->getAmountAttribute()->priceOriginalNet;
+                } else {
+                    $itemData['E2EDP01011']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross;
+                }
                 $itemData['E2EDP19003']['QUALF'] = '002';
                 if ($orderItem->typeId === OrderItemType::TYPE_VARIATION) {
                     $itemData['E2EDP19003']['IDTNR'] = $orderItem->variation->number;
