@@ -189,9 +189,8 @@ class OrderExportService
             }
         }
 
-        //default values for the names, according to initial specifications
-        $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
-        $mctDeliveryName2 = $order->deliveryAddress->name1;
+        $mctDeliveryName1 = '';
+        $mctDeliveryName2 = '';
 
         //special cases for name1 and name2, based on later specs
         if (
@@ -201,7 +200,7 @@ class OrderExportService
             ($order->deliveryAddress->name4 === '')
         ) {
             $mctDeliveryName1 = $order->deliveryAddress->name1;
-            if (strlen($mctDeliveryName1) >35){
+            if (strlen($mctDeliveryName1) > 35) {
                 $mctDeliveryName2 = substr($mctDeliveryName1, 36);
                 $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
             }
@@ -214,10 +213,29 @@ class OrderExportService
             ($order->deliveryAddress->name4 === '')
         ) {
             $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
-            if (strlen($mctDeliveryName1) > 35){
+            if (strlen($mctDeliveryName1) > 35) {
                 $mctDeliveryName2 = substr($mctDeliveryName1, 36);
                 $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
             }
+        }
+
+        if (
+            ($order->deliveryAddress->name1 !== '') &&
+            ($order->deliveryAddress->name2 !== '') &&
+            ($order->deliveryAddress->name3 !== '') &&
+            ($order->deliveryAddress->name4 === '')
+        ) {
+            $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
+            $mctDeliveryName2 = $order->deliveryAddress->name1;
+
+            if (strlen($mctDeliveryName1) > 35) {
+                $mctDeliveryName2 = substr(substr($mctDeliveryName1, 36) . ' ' . $mctDeliveryName2, 0, 35);
+                $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+            }
+        }
+
+        if ($this->orderHelper->orderHasSpeditionShippingProfile($order)) {
+            $mctDeliveryName2 .= ' ' . $order->deliveryAddress->phone;
         }
 
         $record['E2EDKA1003GRP'][] = [
@@ -246,9 +264,8 @@ class OrderExportService
             //error - needs to be clarified
         }
 
-        //default values for the names, according to initial specifications
-        $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
-        $mctBillingName2 = $order->billingAddress->name1;
+        $mctBillingName1 = '';
+        $mctBillingName2 = '';
 
         //special cases for name1 and name2, based on later specs
         if (
@@ -273,6 +290,20 @@ class OrderExportService
             $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
             if (strlen($mctBillingName1) > 35){
                 $mctBillingName2 = substr($mctBillingName1, 36);
+                $mctBillingName1 = substr($mctBillingName1, 0, 35);
+            }
+        }
+
+        if (
+            ($order->billingAddress->name1 !== '') &&
+            ($order->billingAddress->name2 !== '') &&
+            ($order->billingAddress->name3 !== '') &&
+            ($order->billingAddress->name4 === '')
+        ) {
+            $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
+            $mctBillingName2 = $order->billingAddress->name1;
+            if (strlen($mctBillingName1) > 35){
+                $mctBillingName2 = substr(substr($mctBillingName1, 36) . ' ' . $mctBillingName2, 0, 35);
                 $mctBillingName1 = substr($mctBillingName1, 0, 35);
             }
         }

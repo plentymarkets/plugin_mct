@@ -2,6 +2,7 @@
 
 namespace MCT\Helpers;
 
+use Carbon\Carbon;
 use Plenty\Modules\Order\Date\Models\OrderDateType;
 
 class MappingHelper
@@ -55,12 +56,17 @@ class MappingHelper
     }
 
     public function getShippingToDate($order){
+        /** @var Carbon $orderDate */
         $orderDate = $order->dates->filter(
             function ($date) {
                 return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
             }
         )->first()->date;
-        $a = $orderDate;
+        if ($orderDate->isSaturday()){
+            $orderDate->addDays(2);
+        } elseif ($orderDate->isSunday()) {
+            $orderDate->addDays();
+        }
         return $orderDate->isoFormat("YYYYMMDD");
     }
 }

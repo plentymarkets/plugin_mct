@@ -138,10 +138,18 @@ class OrderHelper
         return 'TA';
     }
 
-    public function itemHasSpeditionShippingProfile(int $itemShippingProfile)
+    public function orderHasSpeditionShippingProfile(Order $order)
     {
-        if ($itemShippingProfile == $this->speditionProfileId){
+        //the client requested to consider an order as 'Spedition' if at least one item or the order itself has 'Spedition' shipping profile
+        if ($order->shippingProfileId == $this->speditionProfileId){
             return true;
+        }
+
+        /** @var OrderItem $orderItem */
+        foreach ($order->orderItems as $orderItem) {
+            if ($orderItem->shippingProfileId == $this->speditionProfileId){
+                return true;
+            }
         }
         return false;
     }

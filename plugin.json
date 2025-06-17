@@ -11,7 +11,7 @@
     "namespace": "MCT",
     "author": "plentysystems AG",
     "type": "backend",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "isClosedSource": true,
     "authorIcon": "icon_author_xs.png",
     "pluginIcon": "icon_plugin_xs.png",
