@@ -90,6 +90,22 @@ class OrderHelper
      * @param Order $order
      * @return string|void
      */
+    public function getTaxId(Order $order)
+    {
+        if (
+            $this->isAmazonOrder($order->referrerId) &&
+            ($order->billingAddress->name1 !== '')  &&
+            ($order->billingAddress->taxIdNumber !== '')
+        ) {
+            return $order->billingAddress->taxIdNumber;
+        }
+        return '';
+    }
+
+    /**
+     * @param Order $order
+     * @return string|void
+     */
     public function getTdline(Order $order)
     {
         if (
