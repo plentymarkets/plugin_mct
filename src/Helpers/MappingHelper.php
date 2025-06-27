@@ -45,7 +45,7 @@ class MappingHelper
     }
 
     public function isB2Bclient(string $marketplace){
-        switch ($marketplace){
+        switch (ltrim($marketplace, '0')){
             case '5024143':
             case '5028223':
             case '5029208':

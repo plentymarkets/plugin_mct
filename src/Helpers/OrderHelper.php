@@ -172,16 +172,20 @@ class OrderHelper
 
     /**
      * @param float $referrerId
+     * @param bool $leadingZeroes
      * @return string
      */
-    public function getValueBasedOnMarketplace(float $referrerId)
+    public function getValueBasedOnMarketplace(float $referrerId, bool $leadingZeros=false)
     {
         if (isset($this->marketplaceValueMapping[$referrerId])) {
             $value = $this->marketplaceValueMapping[$referrerId];
         } else {
             $value = '5024143';
         }
-        return str_pad($value, 10, "0", STR_PAD_LEFT);
+        if ($leadingZeros) {
+            return str_pad($value, 10, "0", STR_PAD_LEFT);
+        }
+        return $value;
     }
 
     /**

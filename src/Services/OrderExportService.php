@@ -86,7 +86,7 @@ class OrderExportService
             'MESCOD'    => 'AFT',
             'SNDPOR'    => 'BIZP_TRFC',
             'SNDPRT'    => 'KU',
-            'SNDPRN'    => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
+            'SNDPRN'    => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId, true),
             'RCVPOR'    => 'SAPPW1'
         ];
 
@@ -164,6 +164,7 @@ class OrderExportService
             ]
         ];
 
+        $deliveryPostalCode = $order->deliveryAddress->postalCode;
         //check for wrong SK postal code
         if ((strtoupper($order->deliveryAddress->country->isoCode2) == 'SK') &&
             (!preg_match("/^\d{3} \d{2}$/", $order->deliveryAddress->postalCode))){
@@ -171,7 +172,7 @@ class OrderExportService
             //try to fix if missing SPACE between parts or using '-' or '_' instead of SPACE
             if (preg_match('/^\d{5}$/', $order->deliveryAddress->postalCode) ||
                 preg_match("/^\d{3}[-_]\d{2}$/", $order->deliveryAddress->postalCode)) {
-                $order->deliveryAddress->postalCode = substr($order->deliveryAddress->postalCode, 0, 3)
+                $deliveryPostalCode = substr($order->deliveryAddress->postalCode, 0, 3)
                     . ' '
                     . substr($order->deliveryAddress->postalCode, -2);
             } else {
@@ -246,7 +247,7 @@ class OrderExportService
                 'NAME2' => substr($mctDeliveryName2, 0, 35),
                 'STRAS' => substr($order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2, 0, 35),
                 'ORT01' => substr($order->deliveryAddress->town, 0, 35),
-                'PSTLZ' => $order->deliveryAddress->postalCode,
+                'PSTLZ' => $deliveryPostalCode,
                 'LAND1' => $order->deliveryAddress->country->isoCode2,
                 'TELF1' => $order->deliveryAddress->phone
             ]
