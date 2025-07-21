@@ -442,10 +442,12 @@ class OrderExportService
                 /** @var TableRow $savedObject */
                 $exportDataRepository->save($exportData);
 
+                /*
                 $statusOfProcessedOrder = $this->configRepository->getProcessedOrderStatus();
                 if ($statusOfProcessedOrder != ''){
                     $this->orderRepository->updateOrder(['statusId' => $statusOfProcessedOrder], $plentyOrderId);
                 }
+                */
                 return true;
             }
             $this->getLogger(__METHOD__)
