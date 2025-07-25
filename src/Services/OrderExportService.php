@@ -253,6 +253,27 @@ class OrderExportService
             ]
         ];
 
+        //check for empty delivery names
+        if (
+            (substr($mctDeliveryName1, 0, 35) == '') ||
+            (substr($mctDeliveryName2, 0, 35) == '')
+        ) {
+            $this->getLogger(__METHOD__)
+                ->addReference('orderId', $order->id)
+                ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
+                    'message'           => 'Delivery name fields are empty',
+                    'orderId'           => $order->id,
+                    'deliveryAddress'   => $order->deliveryAddress,
+                    'mctDeliveryName1'  => $mctDeliveryName1,
+                    'mctDeliveryName2'  => $mctDeliveryName2
+                ]);
+            $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
+            if ($statusOfFaultyOrder != ''){
+                //$this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                //return;
+            }
+        }
+
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
                 'PARVW' => 'RG',
@@ -322,6 +343,27 @@ class OrderExportService
                 'TELF1' => ''
             ]
         ];
+
+        //check for empty invoice names
+        if (
+            (substr($mctBillingName1, 0, 35) == '') ||
+            (substr($mctBillingName2, 0, 35) == '')
+        ) {
+            $this->getLogger(__METHOD__)
+                ->addReference('orderId', $order->id)
+                ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
+                    'message'           => 'Billing name fields are empty',
+                    'orderId'           => $order->id,
+                    'deliveryAddress'   => $order->billingAddress,
+                    'mctDeliveryName1'  => $mctBillingName1,
+                    'mctDeliveryName2'  => $mctBillingName2
+                ]);
+            $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
+            if ($statusOfFaultyOrder != ''){
+                //$this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                //return;
+            }
+        }
 
         $record['E2EDK02'] = [];
         $record['E2EDK02'][] = [
