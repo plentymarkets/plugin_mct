@@ -149,11 +149,14 @@ class OrderExportService
             )->first()->date->isoFormat("YYYYMMDD")
         ];
 
-        $record['E2EDK05001'] = [
-            'KSCHL'     => 'YF10',
-            'KOTXT'     => 'Versandkosten',
-            'BETRG'     => $this->orderHelper->getShippingCosts($order)
-        ];
+        $shippingCosts = $this->orderHelper->getShippingCosts($order);
+        if ($shippingCosts != 0.0) {
+            $record['E2EDK05001'] = [
+                'KSCHL' => 'YF10',
+                'KOTXT' => 'Versandkosten',
+                'BETRG' => $shippingCosts
+            ];
+        }
 
         $record['E2EDKA1003GRP'] = [];
 
@@ -263,14 +266,17 @@ class OrderExportService
                 ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
                     'message'           => 'Delivery name fields are empty',
                     'orderId'           => $order->id,
-                    'deliveryAddress'   => $order->deliveryAddress,
                     'mctDeliveryName1'  => $mctDeliveryName1,
-                    'mctDeliveryName2'  => $mctDeliveryName2
+                    'mctDeliveryName2'  => $mctDeliveryName2,
+                    'order-name1'       => $order->deliveryAddress->name1,
+                    'order-name2'       => $order->deliveryAddress->name2,
+                    'order-name3'       => $order->deliveryAddress->name3,
+                    'order-name4'       => $order->deliveryAddress->name4
                 ]);
             $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
             if ($statusOfFaultyOrder != ''){
-                //$this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
-                //return;
+                $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                return;
             }
         }
 
@@ -354,14 +360,17 @@ class OrderExportService
                 ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
                     'message'           => 'Billing name fields are empty',
                     'orderId'           => $order->id,
-                    'deliveryAddress'   => $order->billingAddress,
                     'mctDeliveryName1'  => $mctBillingName1,
-                    'mctDeliveryName2'  => $mctBillingName2
+                    'mctDeliveryName2'  => $mctBillingName2,
+                    'order-name1'       => $order->billingAddress->name1,
+                    'order-name2'       => $order->billingAddress->name2,
+                    'order-name3'       => $order->billingAddress->name3,
+                    'order-name4'       => $order->billingAddress->name4
                 ]);
             $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
             if ($statusOfFaultyOrder != ''){
-                //$this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
-                //return;
+                $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                return;
             }
         }
 
@@ -399,7 +408,8 @@ class OrderExportService
                 'E2EDKT1002' => [
                     'TDID' => 'FIS1',
                     'TSSPRAS' => 'D',
-                    'TSSPRAS_ISO' => $order->billingAddress->country->isoCode2,
+                    'TSSPRAS_ISO' => 'DE' //$order->billingAddress->country->isoCode2,
+                    //the use of 'DE' in all cases was specified by the client in an email
                 ],
                 'E2EDKT2001' => [
                     'TDLINE' => $this->orderHelper->getTdline($order)
