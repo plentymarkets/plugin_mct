@@ -188,6 +188,7 @@ class OrderExportService
                 $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
                 if ($statusOfFaultyOrder != ''){
                     $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                    return;
                 }
                 return;
             }
