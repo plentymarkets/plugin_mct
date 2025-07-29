@@ -38,7 +38,7 @@ class OrderExportService
     /**
      * @var OrderRepositoryContract
      */
-   private $orderRepository;
+    private $orderRepository;
 
     /**
      * @var OrderHelper
@@ -198,44 +198,46 @@ class OrderExportService
         $mctDeliveryName2 = '';
 
         //special cases for name1 and name2, based on later specs
-        if (
-            ($order->deliveryAddress->name1 !== '') &&
-            ($order->deliveryAddress->name2 === '') &&
-            ($order->deliveryAddress->name3 === '') &&
-            ($order->deliveryAddress->name4 === '')
-        ) {
-            $mctDeliveryName1 = $order->deliveryAddress->name1;
-            if (strlen($mctDeliveryName1) > 35) {
-                $mctDeliveryName2 = substr($mctDeliveryName1, 36);
-                $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+        if ($order->deliveryAddress->name1 !== '') {
+            if (($order->deliveryAddress->name2 === '') && ($order->deliveryAddress->name3 === '')) {
+                $mctDeliveryName1 = $order->deliveryAddress->name1;
+                if (strlen($mctDeliveryName1) > 35) {
+                    $mctDeliveryName2 = substr($mctDeliveryName1, 36);
+                    $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+                }
+            } else {
+                $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
+                $mctDeliveryName2 = $order->deliveryAddress->name1;
+                if (strlen($mctDeliveryName1) > 35) {
+                    $mctDeliveryName2 = substr($mctDeliveryName1, 36) . ' ' . $mctDeliveryName2;
+                    $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+                }
             }
-        }
-
-        if (
-            ($order->deliveryAddress->name1 === '') &&
-            ($order->deliveryAddress->name2 !== '') &&
-            ($order->deliveryAddress->name3 !== '') &&
-            ($order->deliveryAddress->name4 === '')
-        ) {
-            $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
-            if (strlen($mctDeliveryName1) > 35) {
-                $mctDeliveryName2 = substr($mctDeliveryName1, 36);
-                $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
-            }
-        }
-
-        if (
-            ($order->deliveryAddress->name1 !== '') &&
-            ($order->deliveryAddress->name2 !== '') &&
-            ($order->deliveryAddress->name3 !== '') &&
-            ($order->deliveryAddress->name4 === '')
-        ) {
-            $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
-            $mctDeliveryName2 = $order->deliveryAddress->name1;
-
-            if (strlen($mctDeliveryName1) > 35) {
-                $mctDeliveryName2 = substr(substr($mctDeliveryName1, 36) . ' ' . $mctDeliveryName2, 0, 35);
-                $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+        } else {
+            if (($order->deliveryAddress->name2 === '') && ($order->deliveryAddress->name3 === '')) {
+                $this->getLogger(__METHOD__)
+                    ->addReference('orderId', $order->id)
+                    ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
+                        'message'           => 'Delivery name fields are empty',
+                        'orderId'           => $order->id,
+                        'mctDeliveryName1'  => $mctDeliveryName1,
+                        'mctDeliveryName2'  => $mctDeliveryName2,
+                        'order-name1'       => $order->deliveryAddress->name1,
+                        'order-name2'       => $order->deliveryAddress->name2,
+                        'order-name3'       => $order->deliveryAddress->name3,
+                        'order-name4'       => $order->deliveryAddress->name4
+                    ]);
+                $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
+                if ($statusOfFaultyOrder != ''){
+                    $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                    return;
+                }
+            } else {
+                $mctDeliveryName1 = $order->deliveryAddress->name2 . ' ' . $order->deliveryAddress->name3;
+                if (strlen($mctDeliveryName1) > 35) {
+                    $mctDeliveryName2 = substr($mctDeliveryName1, 36);
+                    $mctDeliveryName1 = substr($mctDeliveryName1, 0, 35);
+                }
             }
         }
 
@@ -247,8 +249,8 @@ class OrderExportService
             'E2EDKA1003'    => [
                 'PARVW' => 'WE',
                 'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
-                'NAME1' => substr($mctDeliveryName1, 0, 35),
-                'NAME2' => substr($mctDeliveryName2, 0, 35),
+                'NAME1' => $mctDeliveryName1,
+                'NAME2' => $mctDeliveryName2,
                 'STRAS' => substr($order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2, 0, 35),
                 'ORT01' => substr($order->deliveryAddress->town, 0, 35),
                 'PSTLZ' => $deliveryPostalCode,
@@ -256,30 +258,6 @@ class OrderExportService
                 'TELF1' => $order->deliveryAddress->phone
             ]
         ];
-
-        //check for empty delivery names
-        if (
-            (substr($mctDeliveryName1, 0, 35) == '') ||
-            (substr($mctDeliveryName2, 0, 35) == '')
-        ) {
-            $this->getLogger(__METHOD__)
-                ->addReference('orderId', $order->id)
-                ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
-                    'message'           => 'Delivery name fields are empty',
-                    'orderId'           => $order->id,
-                    'mctDeliveryName1'  => $mctDeliveryName1,
-                    'mctDeliveryName2'  => $mctDeliveryName2,
-                    'order-name1'       => $order->deliveryAddress->name1,
-                    'order-name2'       => $order->deliveryAddress->name2,
-                    'order-name3'       => $order->deliveryAddress->name3,
-                    'order-name4'       => $order->deliveryAddress->name4
-                ]);
-            $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
-            if ($statusOfFaultyOrder != ''){
-                $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
-                return;
-            }
-        }
 
         $record['E2EDKA1003GRP'][] = [
             'E2EDKA1003'    => [
@@ -297,43 +275,46 @@ class OrderExportService
         $mctBillingName2 = '';
 
         //special cases for name1 and name2, based on later specs
-        if (
-            ($order->billingAddress->name1 !== '') &&
-            ($order->billingAddress->name2 === '') &&
-            ($order->billingAddress->name3 === '') &&
-            ($order->billingAddress->name4 === '')
-        ) {
-            $mctBillingName1 = $order->billingAddress->name1;
-            if (strlen($mctBillingName1) > 35){
-                $mctBillingName2 = substr($mctBillingName1, 36);
-                $mctBillingName1 = substr($mctBillingName1, 0, 35);
+        if ($order->billingAddress->name1 !== ''){
+            if (($order->billingAddress->name2 === '') && ($order->billingAddress->name3 === '')) {
+                $mctBillingName1 = $order->billingAddress->name1;
+                if (strlen($mctBillingName1) > 35){
+                    $mctBillingName2 = substr($mctBillingName1, 36);
+                    $mctBillingName1 = substr($mctBillingName1, 0, 35);
+                }
+            } else {
+                $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
+                $mctBillingName2 = $order->billingAddress->name1;
+                if (strlen($mctBillingName1) > 35){
+                    $mctBillingName2 = substr($mctBillingName1, 36) . ' ' . $mctBillingName2;
+                    $mctBillingName1 = substr($mctBillingName1, 0, 35);
+                }
             }
-        }
-
-        if (
-            ($order->billingAddress->name1 === '') &&
-            ($order->billingAddress->name2 !== '') &&
-            ($order->billingAddress->name3 !== '') &&
-            ($order->billingAddress->name4 === '')
-        ) {
-            $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
-            if (strlen($mctBillingName1) > 35){
-                $mctBillingName2 = substr($mctBillingName1, 36);
-                $mctBillingName1 = substr($mctBillingName1, 0, 35);
-            }
-        }
-
-        if (
-            ($order->billingAddress->name1 !== '') &&
-            ($order->billingAddress->name2 !== '') &&
-            ($order->billingAddress->name3 !== '') &&
-            ($order->billingAddress->name4 === '')
-        ) {
-            $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
-            $mctBillingName2 = $order->billingAddress->name1;
-            if (strlen($mctBillingName1) > 35){
-                $mctBillingName2 = substr(substr($mctBillingName1, 36) . ' ' . $mctBillingName2, 0, 35);
-                $mctBillingName1 = substr($mctBillingName1, 0, 35);
+        } else {
+            if (($order->billingAddress->name2 === '') && ($order->billingAddress->name3 === '')) {
+                $this->getLogger(__METHOD__)
+                    ->addReference('orderId', $order->id)
+                    ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
+                        'message'           => 'Billing name fields are empty',
+                        'orderId'           => $order->id,
+                        'mctBillingName1'   => $mctBillingName1,
+                        'mctBillingName2'   => $mctBillingName2,
+                        'order-name1'       => $order->billingAddress->name1,
+                        'order-name2'       => $order->billingAddress->name2,
+                        'order-name3'       => $order->billingAddress->name3,
+                        'order-name4'       => $order->billingAddress->name4
+                    ]);
+                $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
+                if ($statusOfFaultyOrder != ''){
+                    $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                    return;
+                }
+            } else {
+                $mctBillingName1 = $order->billingAddress->name2 . ' ' . $order->billingAddress->name3;
+                if (strlen($mctBillingName1) > 35){
+                    $mctBillingName2 = substr($mctBillingName1, 36);
+                    $mctBillingName1 = substr($mctBillingName1, 0, 35);
+                }
             }
         }
 
@@ -350,30 +331,6 @@ class OrderExportService
                 'TELF1' => ''
             ]
         ];
-
-        //check for empty invoice names
-        if (
-            (substr($mctBillingName1, 0, 35) == '') ||
-            (substr($mctBillingName2, 0, 35) == '')
-        ) {
-            $this->getLogger(__METHOD__)
-                ->addReference('orderId', $order->id)
-                ->error(PluginConfiguration::PLUGIN_NAME . '::error.emptyNames', [
-                    'message'           => 'Billing name fields are empty',
-                    'orderId'           => $order->id,
-                    'mctDeliveryName1'  => $mctBillingName1,
-                    'mctDeliveryName2'  => $mctBillingName2,
-                    'order-name1'       => $order->billingAddress->name1,
-                    'order-name2'       => $order->billingAddress->name2,
-                    'order-name3'       => $order->billingAddress->name3,
-                    'order-name4'       => $order->billingAddress->name4
-                ]);
-            $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
-            if ($statusOfFaultyOrder != ''){
-                $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
-                return;
-            }
-        }
 
         $record['E2EDK02'] = [];
         $record['E2EDK02'][] = [
@@ -511,10 +468,10 @@ class OrderExportService
             $this->getLogger(__METHOD__)
                 ->addReference('orderId', $plentyOrderId)
                 ->error(PluginConfiguration::PLUGIN_NAME . '::error.saveExportError',
-                [
-                    'message'     => $e->getMessage(),
-                    'exportData'  => $exportData
-                ]);
+                    [
+                        'message'     => $e->getMessage(),
+                        'exportData'  => $exportData
+                    ]);
         }
         return false;
     }
