@@ -378,6 +378,9 @@ class OrderExportService
                 'E2EDKT1002' => [
                     'TSSPRAS' => '',
                     'TSSPRAS_ISO' => '',
+                ],
+                'E2EDKT2001' => [
+                    'TDLINE' => ''
                 ]
             ];
         }
