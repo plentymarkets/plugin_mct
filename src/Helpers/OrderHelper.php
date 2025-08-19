@@ -67,7 +67,7 @@ class OrderHelper
      * @param float $referrerId
      * @return bool
      */
-    private function isAmazonOrder(float $referrerId)
+    public function isAmazonOrder(float $referrerId)
     {
         /** @var OrderReferrerRepositoryContract $orderReferrerRepo */
         $orderReferrerRepo = pluginApp(OrderReferrerRepositoryContract::class);

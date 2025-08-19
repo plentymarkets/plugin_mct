@@ -342,15 +342,24 @@ class OrderExportService
                 }
             )->first()->date->isoFormat("YYYYMMDD")
         ];
+
+        $externalOrderId = $order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID);
+        if ($this->orderHelper->isAmazonOrder($order->referrerId)){
+            $dashPosition = strpos($externalOrderId, '-');
+            if ($dashPosition !== false) {
+                $externalOrderId = substr($externalOrderId, $dashPosition + 1);
+            }
+        }
         $record['E2EDK02'][] = [
             'QUALF'     => '017',
-            'BELNR'     => substr(substr($order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID), 4), 0, 18),
+            'BELNR'     => substr($externalOrderId, 0, 18),
             'DATUM'     => $order->dates->filter(
                 function ($date) {
                     return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
                 }
             )->first()->date->isoFormat("YYYYMMDD")
         ];
+
         $record['E2EDK02'][] = [
             'QUALF'     => '011',
             'BELNR'     => $order->id,
