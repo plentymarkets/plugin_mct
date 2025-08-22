@@ -92,12 +92,20 @@ class OrderHelper
      */
     public function getTaxId(Order $order)
     {
-        if (
-            $this->isAmazonOrder($order->referrerId) &&
-            ($order->billingAddress->name1 !== '')  &&
-            ($order->billingAddress->taxIdNumber !== '')
-        ) {
-            return $order->billingAddress->taxIdNumber;
+        switch ($this->getValueBasedOnMarketplace($order->referrerId)){
+            case '5024143':
+            case '5028223':
+            case '5029208':
+            case '5029209':
+            case '5030019':
+                if (
+                    (strtolower($order->deliveryAddress->country->isoCode2) != 'de') &&
+                    ($order->billingAddress->name1 !== '')  &&
+                    ($order->billingAddress->taxIdNumber !== '')
+                ) {
+                    return $order->billingAddress->taxIdNumber;
+                }
+                break;
         }
         return '';
     }
@@ -108,14 +116,7 @@ class OrderHelper
      */
     public function getTdline(Order $order)
     {
-        if (
-            $this->isAmazonOrder($order->referrerId) &&
-            ($order->billingAddress->name1 !== '')  &&
-            ($order->billingAddress->taxIdNumber !== '')
-        ) {
-            return 'Ihre UST-ID. Nr.: ' . $order->billingAddress->taxIdNumber;
-        }
-        return '';
+        return 'Ihre UST-ID. Nr.: ' . $order->billingAddress->taxIdNumber;
     }
 
     /**

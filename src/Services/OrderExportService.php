@@ -182,7 +182,7 @@ class OrderExportService
                 $this->getLogger(__METHOD__)
                     ->addReference('orderId', $order->id)
                     ->error(PluginConfiguration::PLUGIN_NAME . '::error.skPostalCode', [
-                        'message'       => 'The SK postal code has a wrong format',
+                        'message'       => 'The SK postal code (delivery) has a wrong format',
                         'orderId'       => $order->id
                     ]);
                 $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
@@ -270,6 +270,32 @@ class OrderExportService
             ((strlen($order->billingAddress->postalCode) < 4) || ($order->billingAddress->postalCode != ' '))) {
             //error - needs to be clarified
         }
+        $invoicePostalCode = $order->billingAddress->postalCode;
+        //check for wrong SK postal code
+        if ((strtoupper($order->billingAddress->country->isoCode2) == 'SK') &&
+            (!preg_match("/^\d{3} \d{2}$/", $order->billingAddress->postalCode))){
+
+            //try to fix if missing SPACE between parts or using '-' or '_' instead of SPACE
+            if (preg_match('/^\d{5}$/', $order->billingAddress->postalCode) ||
+                preg_match("/^\d{3}[-_]\d{2}$/", $order->billingAddress->postalCode)) {
+                $invoicePostalCode = substr($order->billingAddress->postalCode, 0, 3)
+                    . ' '
+                    . substr($order->billingAddress->postalCode, -2);
+            } else {
+                $this->getLogger(__METHOD__)
+                    ->addReference('orderId', $order->id)
+                    ->error(PluginConfiguration::PLUGIN_NAME . '::error.skPostalCode', [
+                        'message'       => 'The SK postal code (invoice) has a wrong format',
+                        'orderId'       => $order->id
+                    ]);
+                $statusOfFaultyOrder = $this->configRepository->getFaultyOrderStatus();
+                if ($statusOfFaultyOrder != ''){
+                    $this->orderRepository->updateOrder(['statusId' => $statusOfFaultyOrder], $order->id);
+                    return;
+                }
+                return;
+            }
+        }
 
         $mctBillingName1 = '';
         $mctBillingName2 = '';
@@ -326,7 +352,7 @@ class OrderExportService
                 'NAME2' => substr($mctBillingName2, 0, 35),
                 'STRAS' => substr($order->billingAddress->address1 . ' ' . $order->billingAddress->address2, 0, 35),
                 'ORT01' => substr($order->billingAddress->town, 0, 35),
-                'PSTLZ' => $order->billingAddress->postalCode,
+                'PSTLZ' => $invoicePostalCode,
                 'LAND1' => $order->billingAddress->country->isoCode2,
                 'TELF1' => ''
             ]
