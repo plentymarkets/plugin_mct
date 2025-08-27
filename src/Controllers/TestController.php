@@ -30,4 +30,20 @@ class TestController extends Controller
         }
         return true;
     }
+
+    public function clearOneOrderFromDataTable($plentyOrderId)
+    {
+        /** @var ExportDataRepository $exportDataRepository */
+        $exportDataRepository = pluginApp(ExportDataRepository::class);
+        try {
+            $exportDataRepository->deleteOneRecord($plentyOrderId);
+        } catch (\Throwable $e) {
+            $this->getLogger(__METHOD__)->error(PluginConfiguration::PLUGIN_NAME . '::error.readExportError',
+                [
+                    'message'     => $e->getMessage(),
+                ]);
+            return false;
+        }
+        return true;
+    }
 }

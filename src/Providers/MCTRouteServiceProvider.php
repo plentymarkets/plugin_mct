@@ -19,6 +19,7 @@ class MCTRouteServiceProvider extends RouteServiceProvider
             function ($apiRouter) {
                 $apiRouter->get('MCT/test/', 'TestController@testMethod');
                 $apiRouter->get('MCT/cleartable/', 'TestController@clearDataTable');
+                $apiRouter->put('MCT/deleteOneOrderFromDataTable/{productCode}', 'TestController@clearOneOrderFromDataTable');
             }
         );
     }

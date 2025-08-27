@@ -266,10 +266,6 @@ class OrderExportService
             ]
         ];
 
-        if ((strtoupper($order->billingAddress->country->isoCode2) == 'SK') &&
-            ((strlen($order->billingAddress->postalCode) < 4) || ($order->billingAddress->postalCode != ' '))) {
-            //error - needs to be clarified
-        }
         $invoicePostalCode = $order->billingAddress->postalCode;
         //check for wrong SK postal code
         if ((strtoupper($order->billingAddress->country->isoCode2) == 'SK') &&

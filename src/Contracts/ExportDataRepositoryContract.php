@@ -16,4 +16,6 @@ interface ExportDataRepositoryContract
     public function orderExists(int $plentyOrderId) : bool;
 
     public function deleteOldRecords(string $dateLimit) : void;
+
+    public function deleteOneRecord(string $plentyOrderId) : void;
 }
