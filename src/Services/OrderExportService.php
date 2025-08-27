@@ -97,6 +97,7 @@ class OrderExportService
             'LIFSK'     => 'Y1'
         ];
 
+        /*
         if ($order->id == 1230) {
             $record['TEST'] = [
                 'referrerId' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
@@ -105,6 +106,7 @@ class OrderExportService
                 'taxNumber' => $order->billingAddress->taxIdNumber
             ];
         }
+        */
 
         $record['E2EDK14'] = [];
         $record['E2EDK14'][] = [
