@@ -97,6 +97,15 @@ class OrderExportService
             'LIFSK'     => 'Y1'
         ];
 
+        if ($order->id == 1230) {
+            $record['TEST'] = [
+                'referrerId' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
+                'isoCode' => strtolower($order->deliveryAddress->country->isoCode2),
+                'billingName1' => $order->billingAddress->name1,
+                'taxNumber' => $order->billingAddress->taxIdNumber
+            ];
+        }
+
         $record['E2EDK14'] = [];
         $record['E2EDK14'][] = [
             'QUALF'     => '006',
