@@ -66,6 +66,20 @@ class MappingHelper
         return false;
     }
 
+    /**
+     * @param string $marketplace
+     * @param string $deliveryCountry
+     * @param string $billingTaxId
+     * @return bool
+     */
+    public function useNetPrice(string $marketplace, string $deliveryCountry, string $billingTaxId)
+    {
+        if ($this->isB2Bclient($marketplace) && (strtolower($deliveryCountry) != 'de') && ($billingTaxId != '')){
+            return true;
+        }
+        return false;
+    }
+
     public function getShippingToDate($order){
         /** @var Carbon $orderDate */
         $orderDate = $order->dates->filter(

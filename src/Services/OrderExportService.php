@@ -439,7 +439,11 @@ class OrderExportService
                 $itemData = [];
                 $itemData['E2EDP01011']['POSEX'] = $counterTen;
                 $itemData['E2EDP01011']['MENGE'] = $orderItem->quantity;
-                if ($this->mappingHelper->isB2Bclient($this->orderHelper->getValueBasedOnMarketplace($order->referrerId))){
+                if ($this->mappingHelper->useNetPrice(
+                    $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
+                    $order->deliveryAddress->country->isoCode2,
+                    $order->billingAddress->taxIdNumber
+                )){
                     $itemData['E2EDP01011']['VPREI'] = $orderItem->getAmountAttribute()->priceOriginalNet;
                 } else {
                     $itemData['E2EDP01011']['PREIS'] = $orderItem->getAmountAttribute()->priceOriginalGross;
