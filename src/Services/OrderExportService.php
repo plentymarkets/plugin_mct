@@ -260,8 +260,8 @@ class OrderExportService
             'E2EDKA1003'    => [
                 'PARVW' => 'WE',
                 'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
-                'NAME1' => $mctDeliveryName1,
-                'NAME2' => $mctDeliveryName2,
+                'NAME1' => substr($mctDeliveryName1, 0, 35),
+                'NAME2' => substr($mctDeliveryName2, 0, 35),
                 'STRAS' => $order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2,
                 'ORT01' => $order->deliveryAddress->town,
                 'PSTLZ' => $deliveryPostalCode,
