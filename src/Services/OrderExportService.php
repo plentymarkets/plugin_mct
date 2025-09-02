@@ -368,7 +368,7 @@ class OrderExportService
         $record['E2EDK02'] = [];
         $record['E2EDK02'][] = [
             'QUALF'     => '001',
-            'BELNR'     => substr($order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID), 0, 18),
+            'BELNR'     => $order->getPropertyValue(OrderPropertyType::EXTERNAL_ORDER_ID),
             'DATUM'     => $order->dates->filter(
                 function ($date) {
                     return $date->typeId == OrderDateType::ORDER_ENTRY_AT;
