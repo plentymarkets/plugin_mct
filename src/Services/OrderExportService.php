@@ -262,8 +262,8 @@ class OrderExportService
                 'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
                 'NAME1' => $mctDeliveryName1,
                 'NAME2' => $mctDeliveryName2,
-                'STRAS' => substr($order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2, 0, 35),
-                'ORT01' => substr($order->deliveryAddress->town, 0, 35),
+                'STRAS' => $order->deliveryAddress->address1 . ' ' . $order->deliveryAddress->address2,
+                'ORT01' => $order->deliveryAddress->town,
                 'PSTLZ' => $deliveryPostalCode,
                 'LAND1' => $order->deliveryAddress->country->isoCode2,
                 'TELF1' => $order->deliveryAddress->phone
@@ -357,8 +357,8 @@ class OrderExportService
                 'PARTN' => $this->orderHelper->getValueBasedOnMarketplace($order->referrerId),
                 'NAME1' => substr($mctBillingName1, 0, 35),
                 'NAME2' => substr($mctBillingName2, 0, 35),
-                'STRAS' => substr($order->billingAddress->address1 . ' ' . $order->billingAddress->address2, 0, 35),
-                'ORT01' => substr($order->billingAddress->town, 0, 35),
+                'STRAS' => $order->billingAddress->address1 . ' ' . $order->billingAddress->address2,
+                'ORT01' => $order->billingAddress->town,
                 'PSTLZ' => $invoicePostalCode,
                 'LAND1' => $order->billingAddress->country->isoCode2,
                 'TELF1' => ''
