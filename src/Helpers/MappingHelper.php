@@ -3,10 +3,23 @@
 namespace MCT\Helpers;
 
 use Carbon\Carbon;
+use MCT\Repositories\HistoryDataRepository;
 use Plenty\Modules\Order\Date\Models\OrderDateType;
 
 class MappingHelper
 {
+    /**
+     * @var HistoryDataRepository
+     */
+    private $historyData;
+
+    public function __construct(
+        HistoryDataRepository $historyData
+    )
+    {
+        $this->historyData = $historyData;
+    }
+
     public function getMarketplaceValueMapping()
     {
         return [
@@ -93,5 +106,16 @@ class MappingHelper
             $orderDate->addDays();
         }
         return $orderDate->isoFormat("YYYYMMDD");
+    }
+
+    public function addHistoryData($message, $plentyOrderId = -1)
+    {
+        $data = [
+            'plentyOrderId' => $plentyOrderId,
+            'message'       => $message,
+            'savedAt'       => Carbon::now()->toDateTimeString()
+        ];
+
+        $this->historyData->save($data);
     }
 }

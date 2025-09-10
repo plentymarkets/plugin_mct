@@ -78,6 +78,8 @@ class OrderExportService
      */
     public function processOrder(Order $order)
     {
+        $this->mappingHelper->addHistoryData('Start processing order ' . $order->id, $order->id);
+
         $record = [];
 
         $record['EDI_DC40'] = [
@@ -460,6 +462,8 @@ class OrderExportService
         }
 
         $this->saveRecord($order->id, $record);
+
+        $this->mappingHelper->addHistoryData('End processing order ' . $order->id, $order->id);
     }
 
     /**
@@ -500,7 +504,7 @@ class OrderExportService
             if (!$exportDataRepository->orderExists($plentyOrderId)) {
                 /** @var TableRow $savedObject */
                 $exportDataRepository->save($exportData);
-
+                $this->mappingHelper->addHistoryData('Saved to export stack', $plentyOrderId);
                 /*
                 $statusOfProcessedOrder = $this->configRepository->getProcessedOrderStatus();
                 if ($statusOfProcessedOrder != ''){
@@ -512,6 +516,7 @@ class OrderExportService
             $this->getLogger(__METHOD__)
                 ->addReference('orderId', $plentyOrderId)
                 ->report(PluginConfiguration::PLUGIN_NAME . '::error.orderExists', $exportData);
+            $this->mappingHelper->addHistoryData('Order already exists in the export stack', $plentyOrderId);
             return false;
         } catch (\Throwable $e) {
             $this->getLogger(__METHOD__)
@@ -521,6 +526,7 @@ class OrderExportService
                         'message'     => $e->getMessage(),
                         'exportData'  => $exportData
                     ]);
+            $this->mappingHelper->addHistoryData('Exception when writing to the export table: ' . $e->getMessage(), $plentyOrderId);
         }
         return false;
     }
@@ -654,6 +660,7 @@ class OrderExportService
                             'fileName'          => $fileName,
                         ]
                     );
+                $this->mappingHelper->addHistoryData('Export to ' . $fileName . ' failed!');
                 return false;
             }
         } catch (\Throwable $exception) {
@@ -664,8 +671,10 @@ class OrderExportService
                     'fileName'=> $fileName
                 ]
             );
+            $this->mappingHelper->addHistoryData('Exception when sending to ' . $fileName . ': ' . $e->getMessage());
             return false;
         }
+        $this->mappingHelper->addHistoryData('Export to ' . $fileName . ' succeeded!');
         return true;
     }
 
@@ -702,6 +711,7 @@ class OrderExportService
      */
     public function sendDataToClient(): bool
     {
+        $this->mappingHelper->addHistoryData('Start sending data to client...');
         /** @var ExportDataRepository $exportDataRepository */
         $exportDataRepository = pluginApp(ExportDataRepository::class);
         try {
@@ -711,15 +721,18 @@ class OrderExportService
                 [
                     'message'     => $e->getMessage(),
                 ]);
+            $this->mappingHelper->addHistoryData('Getting unsent list failed: ' . $e->getMessage());
             return false;
         }
 
         if (count($exportList) == 0){
+            $this->mappingHelper->addHistoryData('Nothing to export...');
             return false;
         }
 
         /** @var TableRow $order */
         foreach ($exportList as $order) {
+            $this->mappingHelper->addHistoryData('Exporting order ' . $order->plentyOrderId . ' to XML...');
             $thisTime = Carbon::now();
             $generationTime = $thisTime->toDateTimeString();
             $xmlContent = $this->generateXMLFromOrderData($order);
@@ -745,6 +758,8 @@ class OrderExportService
         $exportDataRepository = pluginApp(ExportDataRepository::class);
         try {
             $exportDataRepository->deleteOldRecords(Carbon::now()->subDays(30)->toDateTimeString());
+            $this->mappingHelper->addHistoryData('Export table cleared!');
+
         } catch (\Throwable $e) {
             $this->getLogger(__METHOD__)->error(PluginConfiguration::PLUGIN_NAME . '::error.clearExportTableError',
                 [

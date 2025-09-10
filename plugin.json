@@ -11,7 +11,7 @@
     "namespace": "MCT",
     "author": "plentysystems AG",
     "type": "backend",
-    "version": "1.0.31",
+    "version": "1.0.32",
     "isClosedSource": true,
     "authorIcon": "icon_author_xs.png",
     "pluginIcon": "icon_plugin_xs.png",
@@ -28,7 +28,8 @@
     "runOnBuild": [
         "MCT\\Migrations\\CreateMCTExportTable",
         "MCT\\Migrations\\CreateMCTSettingsTable",
-        "MCT\\Migrations\\UseTextColumnInExportTable"
+        "MCT\\Migrations\\UseTextColumnInExportTable",
+        "MCT\\Migrations\\CreateHistoryTable"
     ],
     "dependencies": {
         "guzzlehttp/guzzle": "^7.0",
