@@ -758,8 +758,6 @@ class OrderExportService
         $exportDataRepository = pluginApp(ExportDataRepository::class);
         try {
             $exportDataRepository->deleteOldRecords(Carbon::now()->subDays(30)->toDateTimeString());
-            $this->mappingHelper->addHistoryData('Export table cleared!');
-
         } catch (\Throwable $e) {
             $this->getLogger(__METHOD__)->error(PluginConfiguration::PLUGIN_NAME . '::error.clearExportTableError',
                 [
