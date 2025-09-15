@@ -744,6 +744,7 @@ class OrderExportService
                 return false;
             }
             $this->markRowsAsSent($order, $generationTime);
+            $this->mappingHelper->addHistoryData('Order sent to SFTP', $order->plentyOrderId);
         }
 
         return true;
