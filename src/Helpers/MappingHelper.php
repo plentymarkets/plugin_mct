@@ -91,7 +91,8 @@ class MappingHelper
             10 => 'PRI',
             11 => 'FBA',
             12 => 'ASF',
-            14 => '005'
+            14 => '005',
+            15 => 'PRI'
         ];
     }
 
